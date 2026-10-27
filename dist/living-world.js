@@ -16,7 +16,7 @@ function prepare(W,H,state){
  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
   const i=(y*W+x)*4,originalY=tile[1]+((y-dy)/dh)*tile[3],originalX=tile[0]+((x-dx)/dw)*tile[2];
   let r=pixels.data[i],g=pixels.data[i+1],b=pixels.data[i+2];
-  const isWater=state.place!=='city'&&originalY>.385&&originalY<.91&&g-r>10&&b-r>10&&r<190;
+  const isWater=state.place!=='city'&&originalY>.385&&originalY<.91&&g-r>25&&b-r>35&&b>=g*.98&&r<180;
   if(isWater){waterData.data[i+3]=255;minY=Math.min(minY,y);maxY=Math.max(maxY,y);}
   const green=g-r>3&&g-b>9,ochre=r-g>17&&g-b>18;
   const isLeaf=originalY<.49&&(green||ochre);
@@ -32,7 +32,20 @@ function prepare(W,H,state){
   pixels.data[i+2]=(luminance*.26+b*.74)*.83*.955+54*.045;
  }
  c.putImageData(pixels,0,0);const mask=create(W,H),leafMask=create(W,H);mask.getContext('2d').putImageData(waterData,0,0);leafMask.getContext('2d').putImageData(leafData,0,0);
- const texture=create(W,H),tc=texture.getContext('2d');tc.drawImage(source,0,0);tc.globalCompositeOperation='destination-in';tc.drawImage(mask,0,0);
+ // Extend water paint beneath the shoreline before displacement. Transparent
+ // cut-outs would otherwise carry silhouettes of furniture or rocks into the sea.
+ const texture=create(W,H),tc=texture.getContext('2d'),paint=new ImageData(new Uint8ClampedArray(pixels.data),W,H);
+ let previous=[48,87,105];
+ for(let y=0;y<H;y++){
+  const nearest=new Int32Array(W);let left=-W*2;
+  for(let x=0;x<W;x++){if(waterData.data[(y*W+x)*4+3])left=x;nearest[x]=left;}
+  let right=W*3;
+  for(let x=W-1;x>=0;x--){const i=(y*W+x)*4;if(waterData.data[i+3]){right=x;previous=[pixels.data[i],pixels.data[i+1],pixels.data[i+2]];}
+   else {const nx=x-nearest[x]<right-x?nearest[x]:right,si=(y*W+nx)*4;for(let ch=0;ch<3;ch++)paint.data[i+ch]=nx>=0&&nx<W?pixels.data[si+ch]:previous[ch];}
+   paint.data[i+3]=255;
+  }
+ }
+ tc.putImageData(paint,0,0);
  const result={source,texture,mask,leafMask,minY,maxY};if(cache.size>=2)cache.delete(cache.keys().next().value);cache.set(key,result);return result;
 }
 function waterMotion(data,W,H,time,state){
@@ -47,7 +60,7 @@ function waterMotion(data,W,H,time,state){
   const surge=Math.sin(time*.58-z*7)*depth*.014+Math.sin(time*.31-z*4)*depth*.008;
   const offset=(surge*strength-lift)*Math.min(1,z*5);
   const x=(Math.sin(time*.27-z*5)*W*.009+Math.sin(time*.43-z*11)*W*.003)*perspective*strength;
-  const yy=Math.max(0,Math.min(H-3,y-offset));
+  const yy=Math.max(0,Math.min(data.maxY-2,Math.max(data.minY+1,y-offset)));
   wc.drawImage(data.texture,0,yy,W,2,x,y,W,2);
   if(x>0)wc.drawImage(data.texture,0,yy,Math.ceil(x)+1,2,0,y,Math.ceil(x)+1,2);
   else if(x<0)wc.drawImage(data.texture,W+Math.floor(x)-1,yy,-Math.floor(x)+1,2,W+Math.floor(x)-1,y,-Math.floor(x)+1,2);
