@@ -3,7 +3,23 @@ const sprites=[];
 const orchard=new Image();orchard.src='assets/orchard.jpg';orchard.onload=()=>{
  for(const [x,y,w,h]of [[801,937,118,48],[872,882,73,43],[930,961,84,49]]){
   const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(orchard,x,y,w,h,0,0,w,h);
-  const p=ctx.getImageData(0,0,w,h);for(let i=0;i<p.data.length;i+=4){const r=p.data[i],g=p.data[i+1],b=p.data[i+2];if(r-g<27||g-b<13)p.data[i+3]=0;else{p.data[i]=r*.75;p.data[i+1]=g*.79;p.data[i+2]=b*.81;}}
+  const p=ctx.getImageData(0,0,w,h),mask=new Uint8Array(w*h),visited=new Uint8Array(w*h);let largest=[];
+  // Keep the single painted leaf, excluding the warm paper and neighbouring marks.
+  for(let n=0;n<w*h;n++){const i=n*4,r=p.data[i],g=p.data[i+1],b=p.data[i+2];mask[n]=Number(r-g>43&&r-b>65&&g<165);}
+  for(let n=0;n<mask.length;n++){
+   if(!mask[n]||visited[n])continue;
+   const component=[n];visited[n]=1;
+   for(let k=0;k<component.length;k++){const v=component[k],px=v%w,py=Math.floor(v/w);for(const next of [px>0?v-1:-1,px<w-1?v+1:-1,py>0?v-w:-1,py<h-1?v+w:-1])if(next>=0&&mask[next]&&!visited[next]){visited[next]=1;component.push(next);}}
+   if(component.length>largest.length)largest=component;
+  }
+  mask.fill(0);for(const n of largest)mask[n]=1;
+  // Fill the leaf's pale veins without bringing back the surrounding paper.
+  const outside=new Uint8Array(w*h),queue=[];
+  for(let n=0;n<w*h;n++)if((n<w||n>=w*(h-1)||n%w===0||n%w===w-1)&&!mask[n]){outside[n]=1;queue.push(n);}
+  for(let k=0;k<queue.length;k++){const v=queue[k],px=v%w,py=Math.floor(v/w);for(const next of [px>0?v-1:-1,px<w-1?v+1:-1,py>0?v-w:-1,py<h-1?v+w:-1])if(next>=0&&!mask[next]&&!outside[next]){outside[next]=1;queue.push(next);}}
+  for(let n=0;n<mask.length;n++)if(!outside[n])mask[n]=1;
+  for(let n=0;n<mask.length;n++){const i=n*4;let coverage=mask[n]*4;const px=n%w,py=Math.floor(n/w);for(const next of [px>0?n-1:-1,px<w-1?n+1:-1,py>0?n-w:-1,py<h-1?n+w:-1])if(next>=0)coverage+=mask[next];p.data[i+3]=mask[n]?Math.round(255*coverage/8):0;p.data[i]*=.75;p.data[i+1]*=.79;p.data[i+2]*=.81;}
+
   ctx.putImageData(p,0,0);sprites.push(c);
  }
 };
