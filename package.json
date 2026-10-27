@@ -1,0 +1,11 @@
+{
+  "name": "relaxation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ein Ort ohne Müssen. Salon Format.",
+  "scripts": {
+    "dev": "node server.mjs",
+    "start": "node server.mjs",
+    "check": "node --check dist/copy.js && node --check dist/app.js && node --check dist/living-world.js && node --check dist/sound.js && node --check server.mjs"
+  }
+}

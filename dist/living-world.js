@@ -1,0 +1,99 @@
+// Canvas animation runs in the in-app browser as well as browsers with WebGL.
+const definitions={sea:{base:'assets/coast.jpg',winter:'assets/coast-winter.jpg'},country:{base:'assets/orchard.jpg',winter:'assets/orchard-winter.jpg'},city:{base:'assets/window.jpg',winter:'assets/window-winter.jpg'}};
+const images={};const cache=new Map();
+const create=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c;};
+for(const [place,urls]of Object.entries(definitions)){images[place]={};for(const [season,url]of Object.entries(urls)){const image=new Image();image.onload=()=>{images[place][season]=image;cache.clear();window.dispatchEvent(new Event('relaxation-art-ready'));};image.src=url;}}
+const stage=create(1,1),water=create(1,1),leaves=create(1,1);const sc=stage.getContext('2d'),wc=water.getContext('2d'),lc=leaves.getContext('2d');
+function prepare(W,H,state){
+ const intro=state.mode==='welcome'&&!state.portalOpen;
+ const key=[state.place,state.season,intro,W,H].join(':');if(cache.has(key))return cache.get(key);
+ const image=state.season==='winter'?images[state.place].winter:images[state.place].base;if(!image)return null;
+ const source=create(W,H),c=source.getContext('2d',{willReadFrequently:true});const tile=intro?[.02,.27,.68,.40]:[0,0,1,1];
+ const sx=image.width*tile[0],sy=image.height*tile[1],sw=image.width*tile[2],sh=image.height*tile[3],scale=Math.max(W/sw,H/sh),dw=sw*scale,dh=sh*scale,dx=(W-dw)/2,dy=(H-dh)/2;
+ c.drawImage(image,sx,sy,sw,sh,dx,dy,dw,dh);
+ const pixels=c.getImageData(0,0,W,H),waterData=c.createImageData(W,H),leafData=c.createImageData(W,H);let minY=H,maxY=0;
+ const leafColors={spring:[146,166,112],summer:[102,130,87],autumn:[173,110,66]};
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+  const i=(y*W+x)*4,originalY=tile[1]+((y-dy)/dh)*tile[3],originalX=tile[0]+((x-dx)/dw)*tile[2];
+  let r=pixels.data[i],g=pixels.data[i+1],b=pixels.data[i+2];
+  const isWater=state.place!=='city'&&originalY>.385&&originalY<.91&&g-r>10&&b-r>10&&r<190;
+  if(isWater){waterData.data[i+3]=255;minY=Math.min(minY,y);maxY=Math.max(maxY,y);}
+  const green=g-r>3&&g-b>9,ochre=r-g>17&&g-b>18;
+  const isLeaf=originalY<.49&&(green||ochre);
+  const isCurtain=state.place==='city'&&originalX<.20&&r>180&&g>160;
+  if(isLeaf||isCurtain)leafData.data[i+3]=255;
+  if(isLeaf&&state.season!=='winter'){
+   let target=leafColors[state.season];if(state.place==='sea'&&state.season==='autumn')target=[94,115,87];
+   if(target){const amount=.65;r=r*(1-amount)+target[0]*amount;g=g*(1-amount)+target[1]*amount;b=b*(1-amount)+target[2]*amount;}
+  }
+  const luminance=r*.2126+g*.7152+b*.0722;
+  pixels.data[i]=(luminance*.26+r*.74)*.83*.955+31*.045;
+  pixels.data[i+1]=(luminance*.26+g*.74)*.83*.955+48*.045;
+  pixels.data[i+2]=(luminance*.26+b*.74)*.83*.955+54*.045;
+ }
+ c.putImageData(pixels,0,0);const mask=create(W,H),leafMask=create(W,H);mask.getContext('2d').putImageData(waterData,0,0);leafMask.getContext('2d').putImageData(leafData,0,0);
+ const texture=create(W,H),tc=texture.getContext('2d');tc.drawImage(source,0,0);tc.globalCompositeOperation='destination-in';tc.drawImage(mask,0,0);
+ const result={source,texture,mask,leafMask,minY,maxY};if(cache.size>=2)cache.delete(cache.keys().next().value);cache.set(key,result);return result;
+}
+function waterMotion(data,W,H,time,state){
+ wc.clearRect(0,0,W,H);
+ const strength=state.motionScale??1,depth=Math.max(1,data.maxY-data.minY);
+ const breath=(state.breathAmount||0)*strength;
+ // Continuous displacement: tiny adjacent samples keep the painted contours intact.
+ // Movement increases towards the viewer, leaving the distant horizon still.
+ const lift=breath*depth*.15;
+ for(let y=Math.max(0,data.minY);y<=data.maxY;y+=2){
+  const z=Math.max(0,(y-data.minY)/depth),perspective=z*z;
+  const surge=Math.sin(time*.58-z*7)*depth*.014+Math.sin(time*.31-z*4)*depth*.008;
+  const offset=(surge*strength-lift)*Math.min(1,z*5);
+  const x=(Math.sin(time*.27-z*5)*W*.009+Math.sin(time*.43-z*11)*W*.003)*perspective*strength;
+  const yy=Math.max(0,Math.min(H-3,y-offset));
+  wc.drawImage(data.texture,0,yy,W,2,x,y,W,2);
+  if(x>0)wc.drawImage(data.texture,0,yy,Math.ceil(x)+1,2,0,y,Math.ceil(x)+1,2);
+  else if(x<0)wc.drawImage(data.texture,W+Math.floor(x)-1,yy,-Math.floor(x)+1,2,W+Math.floor(x)-1,y,-Math.floor(x)+1,2);
+ }
+ // Swells expand in perspective. Each crest grows, folds softly, then dissolves.
+ for(let n=0;n<7;n++){
+  const phase=(time/19+n/7)%1,z=phase*phase;
+  const y=data.minY+depth*(.02+z*1.15)-lift*Math.min(1,phase*3);
+  const amp=depth*(.004+z*.035)*strength;
+  const width=depth*(.008+z*.095);
+  const fade=Math.sin(Math.PI*phase)**1.5;
+  const crest=x=>y+amp*(Math.sin(x/W*5.1+n*1.7+time*.12)+.3*Math.sin(x/W*11.3-n+time*.19));
+  const wash=wc.createLinearGradient(0,y-amp,0,y+width+amp);
+  wash.addColorStop(0,`rgba(156,190,185,${fade*.26})`);
+  wash.addColorStop(.27,`rgba(135,173,173,${fade*.16})`);
+  wash.addColorStop(1,'rgba(28,64,79,0)');
+  wc.fillStyle=wash;wc.beginPath();
+  for(let x=-4;x<=W+8;x+=8){const yy=crest(x);x===-4?wc.moveTo(x,yy):wc.lineTo(x,yy);}
+  wc.lineTo(W+8,y+width+amp*2);wc.lineTo(-4,y+width+amp*2);wc.closePath();wc.fill();
+  // Uneven, broken highlights belong to the drawn surface, never a neon outline.
+  wc.lineWidth=.6+z*1.5;wc.strokeStyle=`rgba(204,214,195,${fade*(.13+z*.22)})`;
+  for(let j=0;j<3;j++){
+   const start=W*((j*.37+n*.19)%1),length=W*(.08+z*.13);
+   wc.beginPath();for(let x=start;x<Math.min(W,start+length);x+=5){const yy=crest(x);x===start?wc.moveTo(x,yy):wc.lineTo(x,yy);}wc.stroke();
+  }
+ }
+ // One broad swell is the breath cue: a rising surface, not a separate symbol.
+ if(breath>.001){
+  const y=data.minY+depth*(.75-breath*.32),amp=depth*.022;
+  const glow=wc.createLinearGradient(0,y-amp,0,y+depth*.20);
+  glow.addColorStop(0,`rgba(181,204,191,${breath*.38})`);glow.addColorStop(1,'rgba(181,204,191,0)');
+  wc.fillStyle=glow;wc.beginPath();
+  for(let x=-8;x<=W+8;x+=8){const yy=y+Math.sin(x/W*5.4+time*.10)*amp;x===-8?wc.moveTo(x,yy):wc.lineTo(x,yy);}
+  wc.lineTo(W+8,y+depth*.25);wc.lineTo(-8,y+depth*.25);wc.closePath();wc.fill();
+ }
+ wc.globalCompositeOperation='destination-in';wc.drawImage(data.mask,0,0);wc.globalCompositeOperation='source-over';sc.drawImage(water,0,0);
+}
+export function drawLivingWorld(ctx,W,H,time,state){
+ W=Math.round(W);H=Math.round(H);const data=prepare(W,H,state);if(!data)return;
+ if(stage.width!==W||stage.height!==H)for(const c of [stage,water,leaves]){c.width=W;c.height=H;}
+ sc.clearRect(0,0,W,H);sc.drawImage(data.source,0,0);
+ if(state.place!=='city')waterMotion(data,W,H,time,state);
+ if(state.place==='city'&&!state.paused){
+  const breath=state.breathAmount||0,light=.012+(Math.sin(time*.22)+1)*.008+breath*.11;
+  const wash=sc.createLinearGradient(0,0,W*.25,H*.76);wash.addColorStop(0,`rgba(221,226,204,${light})`);wash.addColorStop(1,'rgba(221,226,204,0)');sc.fillStyle=wash;sc.fillRect(0,0,W,H);
+ }
+ ctx.drawImage(stage,0,0,W,H);
+}
+export function worldIsReady(place){return !!images[place]?.winter;}

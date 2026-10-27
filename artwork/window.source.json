@@ -1,0 +1,11 @@
+{
+  "kind": "generated-illustration",
+  "tool": "built-in image_gen",
+  "prompt": "Create an original full-bleed flat editorial illustration for an immersive relaxation website, wide landscape 1536x1024. Image 1 is a newly created illustration establishing the visual family; image 2 is the user's own original illustration and governs line quality. Use large muted color planes, subtly imperfect hand-drawn contours, delicate ivory interior lines, gently skewed human perspective. Simple but sophisticated adult illustration. No photo, no 3D, no gradients, no glow, no airbrush, no crayon or fake paper grain. A few distinct clear color areas with observed elegant detail, not mechanically geometric and not childish. No text, interface, border, logos or characters. Generous inviting negative space in the left center. Combine the user's illustrated warmth with Bobo Choses color freedom, Headspace approachability without faces, and the beautiful reds/blues of French New Wave cinema. NEW SCENE: looking out through an open old French/Viennese apartment window on a gently rainy afternoon. One muted blue shutter and a narrow vermilion red windowsill frame the right and bottom edges. Beyond the window, two or three subtly irregular cream, muted sage and dusty rose European facades, blue grey rooftops, a quiet sliver of street, a warm lit window. A small simple red ceramic cup on the sill, a soft pale ivory curtain framing the far left. No toy triangular roof, no isometric building, no giant facade dominating the whole view. A sense of shelter and distance. Pale blue grey overcast sky, beautiful subdued blue with one precise red. Do not draw rain streaks into the image: rain will be animated in the browser. Thin slightly irregular ivory architectural contour details just like the artist's original house reference. Full scene is peaceful, slightly imperfect and inviting.",
+  "reference_artist": "Isabella Kohout",
+  "user_feedback": "ja das gefällt mir gut",
+  "references": [
+    "Isabella Kohout's portfolio illustration",
+    "Approved new coastal scene"
+  ]
+}

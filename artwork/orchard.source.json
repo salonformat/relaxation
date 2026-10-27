@@ -1,0 +1,11 @@
+{
+  "kind": "generated-illustration",
+  "tool": "built-in image_gen",
+  "prompt": "Create an original full-bleed flat editorial illustration for an immersive relaxation website, wide landscape 1536x1024. Image 1 is a newly created illustration establishing the visual family; image 2 is the user's own original illustration and governs line quality. Use large muted color planes, subtly imperfect hand-drawn contours, delicate ivory interior lines, gently skewed human perspective. Simple but sophisticated adult illustration. No photo, no 3D, no gradients, no glow, no airbrush, no crayon or fake paper grain. A few distinct clear color areas with observed elegant detail, not mechanically geometric and not childish. No text, interface, border, logos or characters. Generous inviting negative space in the left center. Combine the user's illustrated warmth with Bobo Choses color freedom, Headspace approachability without faces, and the beautiful reds/blues of French New Wave cinema. NEW SCENE: a quiet autumn orchard beside a small lake. Looking out from beneath a crooked chestnut tree at the right edge. Foliage in dusty ochre, muted rust, sage and one restrained red accent. A handful of elongated leaves in branches, large irregular mauve and pale stone shapes along the near bank. Lake calm slate blue, pale warm ivory sky, distant dusty lavender hills, low horizon. A very simple empty bench small at the right bank. The setting should feel like an actual place to linger, not an assortment of icons. Foreground, water, distant hills, canopy are visually separable for later animation. Spacious, intimate, beautiful ordinary autumn, no fantasy landscape. Do not repeat the coastal image's exact composition: a sheltered view through tree trunks, still lake, quiet bank.",
+  "reference_artist": "Isabella Kohout",
+  "user_feedback": "ja das gefällt mir gut",
+  "references": [
+    "Isabella Kohout's portfolio illustration",
+    "Approved new coastal scene"
+  ]
+}

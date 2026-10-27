@@ -1,0 +1,10 @@
+{
+  "kind": "generated-illustration-edit",
+  "tool": "built-in image_gen",
+  "prompt": "Edit this approved illustration into WINTER. One full-bleed scene only, same exact camera and shapes. An evergreen pine with a little snow on upper branches; flat white snow planes on the rocks and terrace; the sea remains open cold muted blue. Calm colors: pale grey-blue, warm off-white, muted slate, sage, a very small muted red. Keep the original's deliberately imperfect contours and thin ivory linework. Simplify detail rather than add any. Large FLAT COLOR AREAS. The user's original drawn bay in reference 2 is the quality bar for simple drawing. No shading gradients, no texture, no dramatic glow, no decorative fantasy, no hyperdetail, no 3D, no text. Winter should feel quietly cold and sheltered, not spectacular. Preserve the approved drawing's human irregularity. Wide 1536x1024.",
+  "references": [
+    "coast.jpg",
+    "Isabella Kohout own original bay illustration"
+  ],
+  "note": "Rejected four-season sheets are not used."
+}

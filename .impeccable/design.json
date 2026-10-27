@@ -1,0 +1,291 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-27T09:15:28.218082+00:00",
+  "title": "Design System: Heute ist alles ein bisschen viel",
+  "extensions": {
+    "shadows": [
+      {
+        "name": "place-panel",
+        "value": "0 18px 65px #10222538",
+        "purpose": "Centered selection panel."
+      },
+      {
+        "name": "dialog",
+        "value": "0 20px 70px #10222555",
+        "purpose": "Technique explanation."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(.16,1,.3,1)",
+        "purpose": "Interface transitions."
+      },
+      {
+        "name": "cue",
+        "value": "1300ms",
+        "purpose": "Guidance text opacity."
+      },
+      {
+        "name": "water",
+        "value": "Canvas2D masked 3px strips and five broad moving wave planes",
+        "purpose": "Animate the painted water while static scenery remains fixed."
+      },
+      {
+        "name": "reduced-motion",
+        "value": ".35 amplitude; Pause fully stops",
+        "purpose": "Retain the requested animated horizon with gentler movement."
+      },
+      {
+        "name": "breath-water",
+        "value": "texture lift .075 of water depth; crest position .62 minus breath × .23 of depth",
+        "purpose": "Selected breath guide only."
+      },
+      {
+        "name": "window-daylight",
+        "value": "slow daylight wash plus breathAmount × .11 opacity",
+        "purpose": "Breath-responsive light at the window, without curtain deformation."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact",
+        "value": "800px"
+      },
+      {
+        "name": "mobile",
+        "value": "480px"
+      },
+      {
+        "name": "short-landscape",
+        "value": "(max-height:650px) and (min-width:700px)"
+      }
+    ],
+    "colorMeta": {
+      "paper": {
+        "role": "neutral",
+        "displayName": "Elfenbein",
+        "tonalRamp": [
+          "oklch(15% 0.025 85)",
+          "oklch(26% 0.025 85)",
+          "oklch(38% 0.025 85)",
+          "oklch(49% 0.025 85)",
+          "oklch(61% 0.025 85)",
+          "oklch(72% 0.025 85)",
+          "oklch(84% 0.025 85)",
+          "oklch(95% 0.025 85)"
+        ]
+      },
+      "ink": {
+        "role": "primary",
+        "displayName": "Dunkles Salbei",
+        "tonalRamp": [
+          "oklch(15% 0.035 200)",
+          "oklch(26% 0.035 200)",
+          "oklch(38% 0.035 200)",
+          "oklch(49% 0.035 200)",
+          "oklch(61% 0.035 200)",
+          "oklch(72% 0.035 200)",
+          "oklch(84% 0.035 200)",
+          "oklch(95% 0.035 200)"
+        ]
+      },
+      "sage": {
+        "role": "secondary",
+        "displayName": "Salbei",
+        "tonalRamp": [
+          "oklch(15% 0.025 120)",
+          "oklch(26% 0.025 120)",
+          "oklch(38% 0.025 120)",
+          "oklch(49% 0.025 120)",
+          "oklch(61% 0.025 120)",
+          "oklch(72% 0.025 120)",
+          "oklch(84% 0.025 120)",
+          "oklch(95% 0.025 120)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Gedämpftes Grün",
+        "tonalRamp": [
+          "oklch(15% 0.015 125)",
+          "oklch(26% 0.015 125)",
+          "oklch(38% 0.015 125)",
+          "oklch(49% 0.015 125)",
+          "oklch(61% 0.015 125)",
+          "oklch(72% 0.015 125)",
+          "oklch(84% 0.015 125)",
+          "oklch(95% 0.015 125)"
+        ]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "Dunkles Panel",
+        "tonalRamp": [
+          "oklch(15% 0.035 200)",
+          "oklch(26% 0.035 200)",
+          "oklch(38% 0.035 200)",
+          "oklch(49% 0.035 200)",
+          "oklch(61% 0.035 200)",
+          "oklch(72% 0.035 200)",
+          "oklch(84% 0.035 200)",
+          "oklch(95% 0.035 200)"
+        ]
+      },
+      "title-accent": {
+        "role": "secondary",
+        "displayName": "Warmer Sand",
+        "tonalRamp": [
+          "oklch(15% 0.045 70)",
+          "oklch(26% 0.045 70)",
+          "oklch(38% 0.045 70)",
+          "oklch(49% 0.045 70)",
+          "oklch(61% 0.045 70)",
+          "oklch(72% 0.045 70)",
+          "oklch(84% 0.045 70)",
+          "oklch(95% 0.045 70)"
+        ]
+      },
+      "selected": {
+        "role": "secondary",
+        "displayName": "Gewähltes Salbei",
+        "tonalRamp": [
+          "oklch(15% 0.03 150)",
+          "oklch(26% 0.03 150)",
+          "oklch(38% 0.03 150)",
+          "oklch(49% 0.03 150)",
+          "oklch(61% 0.03 150)",
+          "oklch(72% 0.03 150)",
+          "oklch(84% 0.03 150)",
+          "oklch(95% 0.03 150)"
+        ]
+      },
+      "selected-text": {
+        "role": "neutral",
+        "displayName": "Helles Elfenbein",
+        "tonalRamp": [
+          "oklch(15% 0.015 85)",
+          "oklch(26% 0.015 85)",
+          "oklch(38% 0.015 85)",
+          "oklch(49% 0.015 85)",
+          "oklch(61% 0.015 85)",
+          "oklch(72% 0.015 85)",
+          "oklch(84% 0.015 85)",
+          "oklch(95% 0.015 85)"
+        ]
+      },
+      "arrival": {
+        "role": "primary",
+        "displayName": "Helles Salbei",
+        "tonalRamp": [
+          "oklch(15% 0.03 120)",
+          "oklch(26% 0.03 120)",
+          "oklch(38% 0.03 120)",
+          "oklch(49% 0.03 120)",
+          "oklch(61% 0.03 120)",
+          "oklch(72% 0.03 120)",
+          "oklch(84% 0.03 120)",
+          "oklch(95% 0.03 120)"
+        ]
+      },
+      "arrival-ink": {
+        "role": "neutral",
+        "displayName": "Salbeitinte",
+        "tonalRamp": [
+          "oklch(15% 0.035 200)",
+          "oklch(26% 0.035 200)",
+          "oklch(38% 0.035 200)",
+          "oklch(49% 0.035 200)",
+          "oklch(61% 0.035 200)",
+          "oklch(72% 0.035 200)",
+          "oklch(84% 0.035 200)",
+          "oklch(95% 0.035 200)"
+        ]
+      },
+      "arrival-hover": {
+        "role": "primary",
+        "displayName": "Helles Salbei Hover",
+        "tonalRamp": [
+          "oklch(15% 0.025 120)",
+          "oklch(26% 0.025 120)",
+          "oklch(38% 0.025 120)",
+          "oklch(49% 0.025 120)",
+          "oklch(61% 0.025 120)",
+          "oklch(72% 0.025 120)",
+          "oklch(84% 0.025 120)",
+          "oklch(95% 0.025 120)"
+        ]
+      }
+    }
+  },
+  "components": [
+    {
+      "name": "Line action",
+      "kind": "button",
+      "description": "Current experience primitive.",
+      "html": "<button class=\"ds-line\">Einfach hier sein</button>",
+      "css": ".ds-line{font-family:Josefin,sans-serif;border:0;cursor:pointer;color:var(--paper,#eee7d5);background:transparent;padding:11px 0 9px;min-height:47px;border-bottom:1px solid #e9e5d575;}.ds-line:hover{border-color:var(--paper,#eee7d5);}.ds-line:focus-visible{outline:2px solid var(--paper,#eee7d5);outline-offset:6px}",
+      "refersTo": "line-button"
+    },
+    {
+      "name": "Arrival",
+      "kind": "button",
+      "description": "Current experience primitive.",
+      "html": "<button class=\"ds-arrive\">Hierhin →</button>",
+      "css": ".ds-arrive{font-family:Josefin,sans-serif;border:0;cursor:pointer;background:#c9d2bd;color:#243e40;padding:12px 20px;min-height:49px;min-width:185px;font-size:17px;}.ds-arrive:hover{background:#d6ddcb;}.ds-arrive:focus-visible{outline:2px solid var(--paper,#eee7d5);outline-offset:6px}",
+      "refersTo": "arrive"
+    },
+    {
+      "name": "Selected season",
+      "kind": "chip",
+      "description": "Current experience primitive.",
+      "html": "<button class=\"ds-segment\">Sommer</button>",
+      "css": ".ds-segment{font-family:Josefin,sans-serif;border:0;cursor:pointer;background:#566d62;color:#fff9ec;padding:7px 9px;min-height:38px;font-size:13px;}.ds-segment:hover{background:#526a61;}.ds-segment:focus-visible{outline:2px solid var(--paper,#eee7d5);outline-offset:6px}",
+      "refersTo": "segment-selected"
+    },
+    {
+      "name": "Guide option",
+      "kind": "button",
+      "description": "Current experience primitive.",
+      "html": "<button class=\"ds-guide\">Dem Atem folgen</button>",
+      "css": ".ds-guide{font-family:Josefin,sans-serif;border:0;cursor:pointer;background:transparent;color:var(--paper,#eee7d5);border-left:1px solid #d5dfca5e;padding:10px 17px;text-align:left;min-height:44px;font-size:19px;}.ds-guide:hover{background:#1c33374d;}.ds-guide:focus-visible{outline:2px solid var(--paper,#eee7d5);outline-offset:6px}"
+    },
+    {
+      "name": "Place panel",
+      "kind": "card",
+      "refersTo": "place-panel",
+      "description": "Centered dark sage selector surface.",
+      "html": "<section class=\"ds-panel\"><h2>Wohin möchtest du?</h2><p>Meer · See · Fenster</p></section>",
+      "css": ".ds-panel{background:var(--panel,#253e40);color:var(--paper,#eee7d5);font:15px/1.6 Josefin,sans-serif;padding:29px 31px 25px;border:1px solid #e0e0cc20;box-shadow:0 18px 65px #10222538;max-width:610px}.ds-panel h2{font:400 26px/1.3 Della,serif;margin:0 0 24px;letter-spacing:-.02em}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Ankommen und hier sein",
+    "overview": "Eine gedämpfte illustrierte Landschaft trägt die Experience. Tintenfarbene Salbeiflächen und elfenbeinfarbene Schrift halten die Bedienung ruhig; der Titel steht direkt im Bild, ohne helle Papierkarte. Unregelmäßige Konturen und feine Binnenlinien der freigegebenen neuen Illustrationen bleiben erhalten.",
+    "keyCharacteristics": [
+      "Gedämpfte Farben und dunkles Salbeigrün.",
+      "Schrift direkt vor der ruhigen illustrierten Welt.",
+      "Wenige Entscheidungen nacheinander.",
+      "Kurze Hinweise, lange stille Zwischenräume."
+    ],
+    "rules": [
+      {
+        "name": "The Quiet Contrast Rule",
+        "body": "Helle Schrift steht auf ruhiger dunkler Fläche; die Begrüßung erhält keine helle Karte.",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "Do keep illustration contours and fine internal lines intact.",
+      "Do separate short everyday-language cues with silence.",
+      "Do offer a free exit and optional sound.",
+      "Do respect reduced motion and retain visible focus."
+    ],
+    "donts": [
+      "Don't bring back the cream welcome card or the knot interaction.",
+      "Don't start a breathing rhythm automatically on arrival.",
+      "Don't add a voice narrator or a breathing circle.",
+      "Don't claim breath measurement, therapeutic outcomes or a completion score."
+    ]
+  }
+}
