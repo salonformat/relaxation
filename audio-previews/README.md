@@ -26,3 +26,10 @@ All generated locally with Piper 1.8.0. Length scale 1.30, volume 0.58, 1.8-seco
 Files `relaxation-frau-de-v2.wav`, `relaxation-frau-en-v2.wav`, and `relaxation-frau-fr-v2.wav` use two connected phrases instead of a fixed long pause after every sentence. Length scale is 1.14; a two-second pause separates the two phrases. This reduces artificial stretching while retaining space between instructions.
 
 The German revision uses the requested English Cori voice with the German phonemizer. Cori is trained for English: German pronunciation/prosody is experimental, and this does not turn the model into a trained multilingual voice. No claim of native or natural German delivery is made. English uses Cori; French retains SIWIS. All are synthetic, separate auditions and not enabled in the experience. Sources and attribution above apply. Exact text and settings: `scripts/generate-natural-previews.py`.
+
+
+## German-capable multilingual voice audition
+
+`relaxation-frau-de-supertonic.wav` uses Supertonic 3, female preset F5, with native language setting `de`. It does not reuse the English-only Cori model. This is a synthetic listening audition only, not enabled in the app and not claimed to be a human recording. Settings: speed 0.90, 12 synthesis steps, sample rate 44.1 kHz. Script: `scripts/generate-supertonic-preview.py`.
+
+Model source: https://huggingface.co/Supertone/supertonic-3 (OpenRAIL-M). Archived model source: https://huggingface.co/supertone-oss-archive/supertonic-3 . SDK 1.3.1; source code MIT: https://github.com/supertone-oss-archive/supertonic-py . Voice F5 is described by the provider as kind, gentle and soft-spoken; suitability for this experience still requires a listening judgement. Models and SDK are not redistributed.
