@@ -1,4 +1,4 @@
-import {copy} from './copy.js';
+import {copy} from './copy.js?v=mobile-audio-1';
 
 // Resolve the whole scene's copy together: choices, cues and exercise explanations.
 // The window uses daylight; sea and lake use a rising and falling water crest.
