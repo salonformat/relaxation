@@ -52,3 +52,7 @@ body.talking .shade,body.guiding .shade{background:#112c34;opacity:.46}.topbar::
 #guide-choice{top:50%;max-height:calc(100dvh - 190px)}
 @media(max-width:480px){#guide-choice{top:50%;max-height:calc(100dvh - 170px)}.tools{gap:12px}}
 @media(max-height:500px){#welcome{top:52%}#welcome h1{font-size:clamp(30px,4.5vw,48px);line-height:1.15}#welcome .line-button{margin-top:18px}.return-place{margin-top:6px}.inspiration{bottom:12px;font-size:10px}}
+
+/* A clear choice on arrival, while the landscape keeps moving. */
+#arrival-choice{max-height:calc(100dvh - 200px);overflow:auto}#arrival-choice h2{margin-bottom:32px}.arrival-actions{display:flex;flex-direction:column;align-items:center;gap:18px}.arrival-actions button{width:min(440px,100%);padding:16px 20px;background:#203c40ed;border:1px solid #eee7d550;font-size:18px;line-height:1.45;transition:background .3s}.arrival-actions button:hover{background:#304d50}.arrival-actions small{display:block;font-size:13px;line-height:1.5;margin-top:8px}#companionship{font-size:14px;border-bottom:1px solid #eee7d580;padding:6px 10px}
+@media(max-width:480px){#arrival-choice{top:48%;width:calc(100vw - 40px);max-height:calc(100dvh - 180px)}#arrival-choice h2{margin-bottom:24px}.arrival-actions{gap:14px}.arrival-actions button{font-size:17px;padding:14px}.arrival-actions small{font-size:12px}#companionship{font-size:13px}}

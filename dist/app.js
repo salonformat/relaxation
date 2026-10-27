@@ -67,7 +67,7 @@ function updateGuidance(dt){
 }
 function animate(ts){if(!last)last=ts;const dt=Math.max(0,(ts-last)/1000);last=ts;if(!document.hidden){updateGuidance(dt);if(!state.paused){time+=dt;state.look.x+=(look.x-state.look.x)*.035;state.look.y+=(look.y-state.look.y)*.035;updateBreath();sound.update(time,state);}if(ts-lastDraw>33&&(!state.paused||state.breathAmount>.001)){drawWorld();drawWeather();lastDraw=ts;}}requestAnimationFrame(animate);}
 function announce(text){$('#status').textContent=text;}
-function hideConversations(){for(const id of ['guide-choice','guidance','closing'])$('#'+id).hidden=true;document.body.classList.remove('talking','guiding');}
+function hideConversations(){for(const id of ['arrival-choice','guide-choice','guidance','closing'])$('#'+id).hidden=true;document.body.classList.remove('talking','guiding');}
 function simplyStay(){stopGuide(false);hideConversations();state.mode='stay';$('#companionship').focus({preventScroll:true});}
 function showGuideChoice(){stopGuide(false);hideConversations();state.mode='choice';$('#guide-choice').hidden=false;document.body.classList.add('talking');$('[data-guide=journey]').focus({preventScroll:true});}
 function startGuide(key){if(state.endSound)sound.prepare().catch(()=>{});clearTimeout(closingTimer);stopGuide(false);hideConversations();state.skipBreath=false;state.mode='guide';document.body.classList.add('guiding');state.guide=key;state.guideElapsed=0;cueIndex=-1;lastGuide=key;lastGuidePlace=state.place;lastGuidePattern=state.breathPattern;lastGuideDuration=state.journeyDuration;$('#guidance').hidden=false;$('#technique-toggle').hidden=true;updateGuidance(0);$('#stop-guide').focus({preventScroll:true});}
@@ -81,12 +81,13 @@ $('#begin').addEventListener('click',()=>{transitionScene();document.body.classL
 $$('button[data-place]').forEach(b=>b.addEventListener('click',()=>{transitionScene();state.place=b.dataset.place;state.season=state.place==='country'?'autumn':'summer';state.weather=state.place==='city'?'rain':'clear';sync();}));
 $$('button[data-season]').forEach(b=>b.addEventListener('click',()=>{transitionScene();state.season=b.dataset.season;sync();}));$$('button[data-weather]').forEach(b=>b.addEventListener('click',()=>{state.weather=b.dataset.weather;sync();}));
 $('#choose-wind').addEventListener('click',()=>{state.wind=!state.wind;sync();});$('#choose-sound').addEventListener('click',()=>{pickSound=!pickSound;$('#choose-sound').setAttribute('aria-pressed',String(pickSound));});
-function arrive(){favorite={place:state.place,season:state.season,weather:state.weather,wind:state.wind};try{localStorage.setItem('relaxation-place',JSON.stringify(favorite));}catch{}stopGuide(false);hideConversations();state.mode='stay';$('#welcome').hidden=true;$('.bottom').hidden=false;document.body.classList.add('inside');togglePlaces(false);setSound(pickSound);$('#companionship').focus({preventScroll:true});announce(labels[state.place]);}
+function arrive(){favorite={place:state.place,season:state.season,weather:state.weather,wind:state.wind};try{localStorage.setItem('relaxation-place',JSON.stringify(favorite));}catch{}stopGuide(false);hideConversations();state.mode='stay';$('#welcome').hidden=true;$('.bottom').hidden=false;document.body.classList.add('inside');togglePlaces(false);setSound(pickSound);state.mode='arrival-choice';$('#arrival-choice').hidden=false;document.body.classList.add('talking');$('#arrival-stay').focus({preventScroll:true});announce(labels[state.place]);}
 $('#arrive').addEventListener('click',arrive);
 $('#return-place').addEventListener('click',()=>{if(!favorite)return;Object.assign(state,favorite,{portalOpen:true});document.body.classList.add('portal-open');sync();arrive();});
 $$('[data-journey-duration]').forEach(el=>el.addEventListener('click',()=>{state.journeyDuration=Number(el.dataset.journeyDuration);savePractice();sync();}));
 $('#breath-pattern').addEventListener('change',()=>{state.breathPattern=$('#breath-pattern').value;savePractice();sync();});
 $('#end-sound').addEventListener('change',()=>{state.endSound=$('#end-sound').checked;savePractice();});
+$('#arrival-stay').addEventListener('click',simplyStay);$('#arrival-guide').addEventListener('click',showGuideChoice);
 $('#no-guide').addEventListener('click',simplyStay);$('#companionship').addEventListener('click',showGuideChoice);$$('[data-guide]').forEach(b=>b.addEventListener('click',()=>startGuide(b.dataset.guide)));$('#stop-guide').addEventListener('click',()=>{stopGuide(false);hideConversations();state.mode='stay';$('#companionship').focus();});
 $('#sound').addEventListener('click',()=>setSound(!state.sound));$('#volume').addEventListener('input',e=>sound.setVolume(Number(e.target.value)/100));sound.setVolume(.45);
 function setPaused(value){state.paused=value;document.body.classList.toggle('paused',value);$('#motion').setAttribute('aria-pressed',String(value));$('#motion').setAttribute('aria-label',value?t.resumeAria:t.pauseAria);$('#motion span').textContent=value?t.resume:t.pause;$('#motion svg').innerHTML=value?'<path d="m8 5 11 7-11 7z"/>':'<path d="M9 6v12M15 6v12"/>';drawWorld();drawWeather();}
@@ -94,7 +95,7 @@ $('#motion').addEventListener('click',()=>setPaused(!state.paused));reduced.addE
 function bare(value){state.bare=value;document.body.classList.toggle('bare',value);$('.topbar').inert=value;$('.bottom').inert=value;$('main').inert=value;$('#restore-interface').hidden=!value;if(value){togglePlaces(false);$('#restore-interface').focus({preventScroll:true});}else $('#hide-interface').focus({preventScroll:true});}
 $('#hide-interface').addEventListener('click',()=>bare(true));$('#restore-interface').addEventListener('click',restoreControls);
 $('#technique-toggle').addEventListener('click',()=>{if(!lastGuide)return;$('#technique-title').textContent=guides[lastGuide].name;$('#technique-text').textContent=makeGuides(sceneText(language,lastGuidePlace,undefined,lastGuideDuration,lastGuidePattern),lastGuideDuration)[lastGuide].about;$('#technique-source').href=lastGuide==='journey'?'https://www.nccih.nih.gov/health/relaxation-techniques-what-you-need-to-know':lastGuide==='breath'?'https://pmc.ncbi.nlm.nih.gov/articles/PMC10395759/':lastGuide==='senses'?'https://www.nhsinform.scot/healthy-living/mental-wellbeing/breathing-and-relaxation-exercises/':'https://www.gesundheit.gv.at/leben/stress/entspannt-bleiben.html';$('#technique-source').textContent=t.source;$('#technique').showModal();});$('#close-technique').addEventListener('click',()=>$('#technique').close());
-document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(state.bare)restoreControls();else if(!$('#places').hidden){togglePlaces(false);(state.mode==='welcome'?$('#begin'):$('#place-toggle')).focus();}else if(state.guide){stopGuide(false);state.mode='stay';}else if(state.mode==='choice')simplyStay();});
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(state.bare)restoreControls();else if(!$('#places').hidden){togglePlaces(false);(state.mode==='welcome'?$('#begin'):$('#place-toggle')).focus();}else if(state.guide){stopGuide(false);state.mode='stay';}else if(['choice','arrival-choice'].includes(state.mode))simplyStay();});
 document.addEventListener('pointerdown',e=>{if(!$('#places').hidden&&!$('#places').contains(e.target)&&!$('#place-toggle').contains(e.target)&&!e.target.closest('.language-switch')){togglePlaces(false);return;}if(['stay','guide','arriving'].includes(state.mode)&&!e.target.closest('button,a,aside,dialog,input'))state.ripple={x:e.clientX/W,y:e.clientY/H,at:time};});window.addEventListener('pointermove',e=>{if(state.mode==='welcome'||!$('#places').hidden)return;look={x:(e.clientX/W-.5)*2,y:(e.clientY/H-.5)*2};},{passive:true});
 document.addEventListener('visibilitychange',()=>{last=0;sound.hide(document.hidden);});window.addEventListener('resize',resize,{passive:true});window.addEventListener('relaxation-art-ready',()=>{drawWorld();drawWeather();});
 window.relaxation={state,sound,get language(){return language},ready:()=>({audio:sound.context?.state,level:sound.measure()})};changeLanguage(language);resize();requestAnimationFrame(animate);
@@ -107,7 +108,7 @@ $('#intro-rain').addEventListener('click',()=>{state.weather=state.weather==='ra
 // Browser navigation stores logical screens, not animation frames or individual cues.
 
 function navigationSnapshot(){
- return {relaxationNavigation:1,navigationIndex:history.state?.navigationIndex||0,state:JSON.parse(JSON.stringify(state)),sections:Object.fromEntries(['welcome','guide-choice','guidance','closing','places'].map(id=>[id,!$('#'+id).hidden])),inside:document.body.classList.contains('inside'),lastGuide,lastGuidePlace,lastGuidePattern,lastGuideDuration,pickSound,cueIndex,technique:$('#technique').open};
+ return {relaxationNavigation:1,navigationIndex:history.state?.navigationIndex||0,state:JSON.parse(JSON.stringify(state)),sections:Object.fromEntries(['welcome','arrival-choice','guide-choice','guidance','closing','places'].map(id=>[id,!$('#'+id).hidden])),inside:document.body.classList.contains('inside'),lastGuide,lastGuidePlace,lastGuidePattern,lastGuideDuration,pickSound,cueIndex,technique:$('#technique').open};
 }
 function navigationRoute(s){return [s.state.bare?'bare':'visible',s.technique?'info':'',s.sections.places?'places':s.state.mode,s.state.guide||''].join(':');}
 function recordNavigation(push=true){
@@ -122,7 +123,7 @@ function restoreNavigation(saved){
  Object.assign(state,{portalOpen:false,skipBreath:false,journeyDuration:60,breathPattern:'4-6',endSound:true},saved.state);lastGuide=saved.lastGuide;lastGuidePlace=saved.lastGuidePlace;lastGuidePattern=saved.lastGuidePattern||'4-6';lastGuideDuration=saved.lastGuideDuration||300;pickSound=saved.pickSound;cueIndex=saved.cueIndex;
  if(['arriving','invitation'].includes(state.mode))state.mode='stay';
  for(const [id,visible]of Object.entries(saved.sections)){const el=$('#'+id);if(el)el.hidden=!visible;}
- for(const [name,value]of Object.entries({inside:saved.inside,'portal-open':!!state.portalOpen,choosing:saved.sections.places,talking:!!saved.sections['guide-choice'],guiding:!!state.guide,bare:state.bare}))document.body.classList.toggle(name,value);
+ for(const [name,value]of Object.entries({inside:saved.inside,'portal-open':!!state.portalOpen,choosing:saved.sections.places,talking:!!(saved.sections['guide-choice']||saved.sections['arrival-choice']),guiding:!!state.guide,bare:state.bare}))document.body.classList.toggle(name,value);
  for(const selector of ['.topbar','.bottom','main'])$(selector).inert=state.bare;
  $('.bottom').hidden=!saved.inside;$('#restore-interface').hidden=!state.bare;
  $('#place-toggle').setAttribute('aria-expanded',String(saved.sections.places));
@@ -134,7 +135,7 @@ function restoreNavigation(saved){
  if(saved.technique){$('#technique-text').textContent=makeGuides(sceneText(language,lastGuidePlace,undefined,lastGuideDuration,lastGuidePattern),lastGuideDuration)[lastGuide].about;$('#technique').showModal();}
  setSound(!!saved.state.sound);
 
- const focus=state.bare?$('#restore-interface'):saved.sections.places?$('#close-places'):state.guide?$('#stop-guide'):saved.sections['guide-choice']?$('[data-guide=journey]'):saved.inside?$('#companionship'):$('#begin');
+ const focus=state.bare?$('#restore-interface'):saved.sections.places?$('#close-places'):state.guide?$('#stop-guide'):saved.sections['arrival-choice']?$('#arrival-stay'):saved.sections['guide-choice']?$('[data-guide=journey]'):saved.inside?$('#companionship'):$('#begin');
  focus.focus({preventScroll:true});restoringNavigation=false;
 }
 function restoreControls(){
@@ -155,7 +156,7 @@ $('#restart').addEventListener('click',restart);
 document.addEventListener('click',e=>{
  if(state.bare&&!e.target.closest('#restore-interface')){e.preventDefault();e.stopImmediatePropagation();restoreControls();}
 },true);
-const navigationControls='#return-place,#begin,#arrive,#place-toggle,#close-places,#no-guide,#companionship,[data-guide],#stop-guide,#hide-interface,#restart,#technique-toggle,#close-technique';
+const navigationControls='#arrival-stay,#arrival-guide,#return-place,#begin,#arrive,#place-toggle,#close-places,#no-guide,#companionship,[data-guide],#stop-guide,#hide-interface,#restart,#technique-toggle,#close-technique';
 document.addEventListener('click',e=>{if(e.target.closest(navigationControls)&&navigationReady)history.replaceState(navigationSnapshot(),'');},true);
 document.addEventListener('click',e=>{if(e.target.closest(navigationControls))recordNavigation();});
 window.addEventListener('popstate',e=>restoreNavigation(e.state));
