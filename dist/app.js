@@ -4,9 +4,10 @@ import {copy,makeGuides,applyCopy} from './copy.js';
 import {drawLivingWorld} from './living-world.js';
 import {drawFallingLeaves} from './nature-motion.js';
 import {Soundscape} from './sound.js';
+let navigationReady=false,restoringNavigation=false;
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');
-const state={place:'sea',season:'summer',weather:'clear',wind:true,mode:'welcome',paused:false,motionScale:reduced.matches?.35:1,sound:false,bare:false,breathing:false,breathAmount:0,look:{x:0,y:0},ripple:{x:0,y:0,at:-100},guide:null,guideElapsed:0};
+const state={place:'sea',season:'summer',weather:'clear',wind:true,portalOpen:false,mode:'welcome',paused:false,motionScale:reduced.matches?.35:1,sound:false,bare:false,breathing:false,breathAmount:0,look:{x:0,y:0},ripple:{x:0,y:0,at:-100},guide:null,guideElapsed:0};
 const canvas=$('#landscape'),ctx=canvas.getContext('2d'),weather=$('#weather'),wc=weather.getContext('2d'),sound=new Soundscape();
 let language='de';try{language=localStorage.getItem('relaxation-language')||'de';}catch{}language=new URLSearchParams(location.search).get('lang')||language;if(!copy[language])language='de';let t=copyForScene(language,state.place,state.season),labels=t.places,guides=makeGuides(t);
 let W=innerWidth,H=innerHeight,dpr=Math.min(devicePixelRatio||1,2),time=0,last=0,lastDraw=0,arrivalTimer=null,closingTimer=null,cueIndex=-1,breathStart=0,lastBreathWord='',pickSound=true,look={x:0,y:0},lastGuide=null,lastGuidePlace=null;
@@ -28,16 +29,18 @@ function updateBreath(){
   const elapsed=Math.max(0,state.guideElapsed-guides[state.guide].breathAt),{phase,inhale,amount}=breathAt(elapsed);
   const word=inhale?t.inhale:t.exhale;
   $('#breath-word').textContent=word;
-  $('#breath-duration').textContent=inhale?t.inhaleDuration:t.exhaleDuration;
+  $('#breath-duration').textContent=`${Math.max(1,Math.ceil(inhale?4-phase:10-phase))} s`;
   state.breathPhase=inhale?'in':'out';state.breathSeconds=phase;
   state.breathAmount=amount;
  }else state.breathAmount*=.94;
  $('#breath-guide').style.setProperty('--breath',state.breathAmount.toFixed(4));
  if(state.breathing)sound.breathe(state.breathAmount,true);
 }
+function clockText(seconds){const s=Math.max(0,Math.ceil(seconds));return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;}
+function updateGuideTimer(){if(!state.guide)return;const text=t.remaining.replace('{time}',clockText(guides[state.guide].end-state.guideElapsed));if($('#guide-timer').textContent!==text)$('#guide-timer').textContent=text;}
 function updateGuidance(dt){
  if(!state.guide||document.hidden||state.paused)return;
- state.guideElapsed+=dt;const g=guides[state.guide];
+ state.guideElapsed+=dt;updateGuideTimer();const g=guides[state.guide];
  if(state.guideElapsed>=g.end){finishGuide();return;}
  let index=-1;for(let i=0;i<g.cues.length;i++)if(state.guideElapsed>=g.cues[i].at)index=i;
  if(index!==cueIndex&&index>=0){cueIndex=index;$('#guide-line').textContent=g.cues[index].text;}
@@ -49,15 +52,15 @@ function animate(ts){if(!last)last=ts;const dt=Math.max(0,(ts-last)/1000);last=t
 function announce(text){$('#status').textContent=text;}
 function hideConversations(){for(const id of ['invitation','guide-choice','guidance','closing'])$('#'+id).hidden=true;document.body.classList.remove('talking','guiding');}
 function clearArrival(){clearTimeout(arrivalTimer);arrivalTimer=null;}
-function showInvitation(){if(state.bare||!$('#places').hidden)return;state.mode='invitation';hideConversations();$('#invitation').hidden=false;document.body.classList.add('talking');$('#just-stay').focus({preventScroll:true});}
+function showInvitation(){if(state.bare||!$('#places').hidden)return;state.mode='invitation';hideConversations();$('#invitation').hidden=false;document.body.classList.add('talking');$('#just-stay').focus({preventScroll:true});recordNavigation(false);}
 function simplyStay(){clearArrival();stopGuide(false);hideConversations();state.mode='stay';$('#companionship').focus({preventScroll:true});}
 function showGuideChoice(){clearArrival();stopGuide(false);hideConversations();state.mode='choice';$('#guide-choice').hidden=false;document.body.classList.add('talking');$('[data-guide=journey]').focus({preventScroll:true});}
 function startGuide(key){clearArrival();clearTimeout(closingTimer);stopGuide(false);hideConversations();state.skipBreath=false;state.mode='guide';document.body.classList.add('guiding');state.guide=key;state.guideElapsed=0;cueIndex=-1;lastGuide=key;lastGuidePlace=state.place;$('#guidance').hidden=false;$('#technique-toggle').hidden=true;updateGuidance(0);$('#stop-guide').focus({preventScroll:true});}
 function stopGuide(showEnding=false){document.body.classList.remove('guiding');state.guide=null;state.guideElapsed=0;cueIndex=-1;setBreathing(false);$('#guidance').hidden=true;if(showEnding)finishGuide();}
-function finishGuide(){state.guide=null;setBreathing(false);hideConversations();state.mode='stay';$('#closing').hidden=false;$('#technique-toggle').hidden=!lastGuide;closingTimer=setTimeout(()=>$('#closing').hidden=true,11000);$('#companionship').focus({preventScroll:true});}
+function finishGuide(){state.guide=null;setBreathing(false);hideConversations();state.mode='stay';$('#closing').hidden=false;$('#technique-toggle').hidden=!lastGuide;closingTimer=setTimeout(()=>$('#closing').hidden=true,11000);$('#companionship').focus({preventScroll:true});recordNavigation(false);}
 function togglePlaces(force){const open=typeof force==='boolean'?force:$('#places').hidden;$('#places').hidden=!open;$('#place-toggle').setAttribute('aria-expanded',String(open));document.body.classList.toggle('choosing',open);if(open){clearArrival();stopGuide(false);hideConversations();$('#close-places').focus({preventScroll:true});}}
 function transitionScene(){const c=$('#transition-world');c.getAnimations().forEach(a=>a.cancel());c.getContext('2d').clearRect(0,0,c.width,c.height);c.style.opacity='0';}
-function sync(){t=copyForScene(language,state.place,state.season);labels=t.places;guides=makeGuides(t);applyCopy(language,t);document.body.dataset.scene=state.place;document.body.dataset.season=state.season;$('#place-name').textContent=labels[state.place];for(const key of ['place','season','weather'])$$(`button[data-${key}]`).forEach(b=>b.setAttribute('aria-pressed',String(b.dataset[key]===state[key])));$('#choose-wind').setAttribute('aria-pressed',String(state.wind));drawWorld();drawWeather();sound.scene(state);}
+function sync(){$('#restart').hidden=!state.portalOpen&&state.mode==='welcome';t=copyForScene(language,state.place,state.season);labels=t.places;guides=makeGuides(t);applyCopy(language,t);for(const el of $$('[data-guide-duration]'))el.textContent=clockText(guides[el.dataset.guideDuration].end);updateGuideTimer();document.body.dataset.scene=state.place;document.body.dataset.season=state.season;$('#place-name').textContent=labels[state.place];for(const key of ['place','season','weather'])$$(`button[data-${key}]`).forEach(b=>b.setAttribute('aria-pressed',String(b.dataset[key]===state[key])));$('#choose-wind').setAttribute('aria-pressed',String(state.wind));drawWorld();drawWeather();sound.scene(state);}
 async function setSound(value){try{if(value){await sound.start();sound.scene(state);}else sound.stop();state.sound=value;$('#sound').setAttribute('aria-pressed',String(value));$('#sound').setAttribute('aria-label',value?t.soundOffAria:t.soundOnAria);$('#sound span').textContent=value?t.soundOn:t.soundOff;}catch{state.sound=false;announce(t.soundError);$('#sound span').textContent=t.soundRetry;}}
 $('#begin').addEventListener('click',()=>{transitionScene();document.body.classList.add('portal-open');state.portalOpen=true;setSound(pickSound);togglePlaces(true);sync();});$('#place-toggle').addEventListener('click',()=>togglePlaces());$('#close-places').addEventListener('click',()=>{togglePlaces(false);(state.mode==='welcome'?$('#begin'):$('#place-toggle')).focus();});
 $$('button[data-place]').forEach(b=>b.addEventListener('click',()=>{transitionScene();state.place=b.dataset.place;state.season=state.place==='country'?'autumn':'summer';state.weather=state.place==='city'?'rain':'clear';sync();}));
@@ -69,9 +72,9 @@ $('#sound').addEventListener('click',()=>setSound(!state.sound));$('#volume').ad
 function setPaused(value){state.paused=value;document.body.classList.toggle('paused',value);$('#motion').setAttribute('aria-pressed',String(value));$('#motion').setAttribute('aria-label',value?t.resumeAria:t.pauseAria);$('#motion span').textContent=value?t.resume:t.pause;$('#motion svg').innerHTML=value?'<path d="m8 5 11 7-11 7z"/>':'<path d="M9 6v12M15 6v12"/>';drawWorld();drawWeather();}
 $('#motion').addEventListener('click',()=>setPaused(!state.paused));reduced.addEventListener('change',e=>{state.motionScale=e.matches?.35:1;drawWorld();});
 function bare(value){state.bare=value;document.body.classList.toggle('bare',value);$('.topbar').inert=value;$('.bottom').inert=value;$('main').inert=value;$('#restore-interface').hidden=!value;if(value){clearArrival();togglePlaces(false);$('#restore-interface').focus({preventScroll:true});}else $('#hide-interface').focus({preventScroll:true});}
-$('#hide-interface').addEventListener('click',()=>bare(true));$('#restore-interface').addEventListener('click',()=>bare(false));
+$('#hide-interface').addEventListener('click',()=>bare(true));$('#restore-interface').addEventListener('click',restoreControls);
 $('#technique-toggle').addEventListener('click',()=>{if(!lastGuide)return;$('#technique-title').textContent=guides[lastGuide].name;$('#technique-text').textContent=makeGuides(copyForScene(language,lastGuidePlace))[lastGuide].about;$('#technique-source').href=lastGuide==='journey'?'https://www.nccih.nih.gov/health/relaxation-techniques-what-you-need-to-know':lastGuide==='breath'?'https://pmc.ncbi.nlm.nih.gov/articles/PMC10395759/':lastGuide==='senses'?'https://www.nhsinform.scot/healthy-living/mental-wellbeing/breathing-and-relaxation-exercises/':'https://www.gesundheit.gv.at/leben/stress/entspannt-bleiben.html';$('#technique-source').textContent=t.source;$('#technique').showModal();});$('#close-technique').addEventListener('click',()=>$('#technique').close());
-document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(state.bare)bare(false);else if(!$('#places').hidden){togglePlaces(false);(state.mode==='welcome'?$('#begin'):$('#place-toggle')).focus();}else if(state.guide){stopGuide(false);state.mode='stay';}else if(['choice','invitation'].includes(state.mode))simplyStay();});
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(state.bare)restoreControls();else if(!$('#places').hidden){togglePlaces(false);(state.mode==='welcome'?$('#begin'):$('#place-toggle')).focus();}else if(state.guide){stopGuide(false);state.mode='stay';}else if(['choice','invitation'].includes(state.mode))simplyStay();});
 document.addEventListener('pointerdown',e=>{if(!$('#places').hidden&&!$('#places').contains(e.target)&&!$('#place-toggle').contains(e.target)&&!e.target.closest('.language-switch')){togglePlaces(false);return;}if(['stay','guide','arriving'].includes(state.mode)&&!e.target.closest('button,a,aside,dialog,input'))state.ripple={x:e.clientX/W,y:e.clientY/H,at:time};});window.addEventListener('pointermove',e=>{if(state.mode==='welcome'||!$('#places').hidden)return;look={x:(e.clientX/W-.5)*2,y:(e.clientY/H-.5)*2};},{passive:true});
 document.addEventListener('visibilitychange',()=>{last=0;sound.hide(document.hidden);if(!document.hidden&&state.mode==='arriving'&&!arrivalTimer)showInvitation();});window.addEventListener('resize',resize,{passive:true});window.addEventListener('relaxation-art-ready',()=>{drawWorld();drawWeather();});
 window.relaxation={state,sound,get language(){return language},ready:()=>({audio:sound.context?.state,level:sound.measure()})};changeLanguage(language);resize();requestAnimationFrame(animate);
@@ -80,3 +83,64 @@ function changeLanguage(lang){if(!copy[lang])return;language=lang;t=copyForScene
 $('#skip-breath').addEventListener('click',()=>{state.skipBreath=true;setBreathing(false);state.guideElapsed=guides[state.guide].breathUntil;cueIndex=-1;updateGuidance(0);$('#stop-guide').focus({preventScroll:true});});
 $$('[data-language]').forEach(b=>b.addEventListener('click',()=>changeLanguage(b.dataset.language)));
 $('#intro-rain').addEventListener('click',()=>{state.weather=state.weather==='rain'?'clear':'rain';$('#intro-rain').setAttribute('aria-pressed',String(state.weather==='rain'));sync();if(!state.sound)setSound(true);});
+
+// Browser navigation stores logical screens, not animation frames or individual cues.
+
+function navigationSnapshot(){
+ return {relaxationNavigation:1,navigationIndex:history.state?.navigationIndex||0,state:JSON.parse(JSON.stringify(state)),sections:Object.fromEntries(['welcome','invitation','guide-choice','guidance','closing','places'].map(id=>[id,!$('#'+id).hidden])),inside:document.body.classList.contains('inside'),lastGuide,lastGuidePlace,pickSound,cueIndex,technique:$('#technique').open};
+}
+function navigationRoute(s){return [s.state.bare?'bare':'visible',s.technique?'info':'',s.sections.places?'places':s.state.mode,s.state.guide||''].join(':');}
+function recordNavigation(push=true){
+ if(!navigationReady||restoringNavigation)return;
+ const next=navigationSnapshot(),old=history.state;
+ if(push&&old?.relaxationNavigation===1&&navigationRoute(old)!==navigationRoute(next)){next.navigationIndex=(old.navigationIndex||0)+1;history.pushState(next,'');}
+ else {next.navigationIndex=old?.navigationIndex||0;history.replaceState(next,'');}
+}
+function restoreNavigation(saved){
+ if(saved?.relaxationNavigation!==1)return;
+ restoringNavigation=true;clearArrival();clearTimeout(closingTimer);stopGuide(false);
+ Object.assign(state,{portalOpen:false,skipBreath:false},saved.state);lastGuide=saved.lastGuide;lastGuidePlace=saved.lastGuidePlace;pickSound=saved.pickSound;cueIndex=saved.cueIndex;
+ for(const [id,visible]of Object.entries(saved.sections))$('#'+id).hidden=!visible;
+ for(const [name,value]of Object.entries({inside:saved.inside,'portal-open':!!state.portalOpen,choosing:saved.sections.places,talking:saved.sections.invitation||saved.sections['guide-choice'],guiding:!!state.guide,bare:state.bare}))document.body.classList.toggle(name,value);
+ for(const selector of ['.topbar','.bottom','main'])$(selector).inert=state.bare;
+ $('.bottom').hidden=!saved.inside;$('#restore-interface').hidden=!state.bare;
+ $('#place-toggle').setAttribute('aria-expanded',String(saved.sections.places));
+ $('#choose-sound').setAttribute('aria-pressed',String(pickSound));
+ sync();setPaused(state.paused);setBreathing(!!saved.state.breathing);
+ if(state.guide){const g=guides[state.guide];$('#guide-line').textContent=cueIndex>=0?g.cues[cueIndex].text:'';updateGuidance(0);updateBreath();}
+ $('#technique-toggle').hidden=!lastGuide;
+ if($('#technique').open)$('#technique').close();
+ if(saved.technique){$('#technique-text').textContent=makeGuides(copyForScene(language,lastGuidePlace))[lastGuide].about;$('#technique').showModal();}
+ setSound(!!saved.state.sound);
+ if(state.mode==='arriving'&&!state.bare)arrivalTimer=setTimeout(showInvitation,7000);
+ const focus=state.bare?$('#restore-interface'):saved.sections.places?$('#close-places'):state.guide?$('#stop-guide'):saved.sections['guide-choice']?$('[data-guide=journey]'):saved.sections.invitation?$('#just-stay'):saved.inside?$('#companionship'):$('#begin');
+ focus.focus({preventScroll:true});restoringNavigation=false;
+}
+function restoreControls(){
+ if(state.bare&&(history.state?.navigationIndex||0)>0){history.back();return;}
+ bare(false);recordNavigation(false);
+}
+function restart(){
+ clearArrival();clearTimeout(closingTimer);stopGuide(false);hideConversations();
+ if($('#technique').open)$('#technique').close();
+ Object.assign(state,{place:'sea',season:'summer',weather:'clear',wind:true,portalOpen:false,mode:'welcome',paused:false,bare:false,breathing:false,breathAmount:0,portalOpen:false,skipBreath:false,guide:null,guideElapsed:0});
+ lastGuide=null;lastGuidePlace=null;cueIndex=-1;
+ for(const name of ['inside','portal-open','choosing','talking','guiding','bare'])document.body.classList.remove(name);
+ for(const selector of ['.topbar','.bottom','main'])$(selector).inert=false;
+ $('#welcome').hidden=false;$('#places').hidden=true;$('.bottom').hidden=true;$('#restore-interface').hidden=true;$('#technique-toggle').hidden=true;$('#place-toggle').setAttribute('aria-expanded','false');
+ setSound(false);setPaused(false);sync();$('#begin').focus({preventScroll:true});
+}
+$('#restart').addEventListener('click',restart);
+document.addEventListener('click',e=>{
+ if(state.bare&&!e.target.closest('#restore-interface')){e.preventDefault();e.stopImmediatePropagation();restoreControls();}
+},true);
+const navigationControls='#begin,#arrive,#place-toggle,#close-places,#just-stay,#no-guide,#show-guides,#companionship,[data-guide],#stop-guide,#hide-interface,#restart,#technique-toggle,#close-technique';
+document.addEventListener('click',e=>{if(e.target.closest(navigationControls)&&navigationReady)history.replaceState(navigationSnapshot(),'');},true);
+document.addEventListener('click',e=>{if(e.target.closest(navigationControls))recordNavigation();});
+window.addEventListener('popstate',e=>restoreNavigation(e.state));
+// Escape and outside-click dismissals update the current logical screen too.
+document.addEventListener('keydown',e=>{if(e.key==='Escape')recordNavigation();});
+navigationReady=true;
+if(history.state?.relaxationNavigation===1)restoreNavigation(history.state);else recordNavigation(false);
+
+$('#technique').addEventListener('close',()=>recordNavigation(false));

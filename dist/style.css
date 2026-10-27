@@ -35,3 +35,9 @@ body.talking .shade,body.guiding .shade{background:#112c34;opacity:.46}.topbar::
 
 .inspiration{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:3;font-size:12px;line-height:1.6;text-align:center;color:var(--paper);width:min(420px,80%);margin:0}.inside .inspiration,.portal-open .inspiration,.bare .inspiration{display:none}
 @media(max-width:480px){.inspiration{bottom:24px;max-width:285px;font-size:11px}}
+
+#restore-interface{opacity:1;min-height:44px;padding:12px 22px;background:#243e42;color:var(--paper);border:1px solid #bfcab480;cursor:pointer}#restore-interface:hover{background:#345357}.bare #world{cursor:pointer}
+@media(max-width:480px){.tools{gap:12px}#restart{min-width:26px}.language-switch{gap:5px;left:47%}}
+
+#guide-timer{position:absolute;left:50%;top:17%;transform:translateX(-50%);margin:0;font-size:13px;line-height:1.5;color:var(--paper);font-variant-numeric:tabular-nums}.guide-duration{display:block;font:400 12px/1.4 Josefin,sans-serif!important;letter-spacing:.02em;color:var(--paper);font-variant-numeric:tabular-nums}.journey-start{gap:8px}.guide-options .guide-duration{margin:3px 0 4px}
+@media(max-width:480px){#guide-timer{top:15%;font-size:12px}#guide-choice .guide-options button{padding-top:3px;padding-bottom:3px}#guide-choice .guide-options{gap:2px}.guide-options .guide-duration{margin:2px 0}.journey-start{gap:5px}}

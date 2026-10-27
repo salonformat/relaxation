@@ -48,3 +48,8 @@ Autumn lake leaves are cut from the approved orchard image, fall, turn, settle a
 
 
 Scene consistency update: window guidance and explanations use daylight throughout DE/EN/FR. Winter weather offers clear or snow; precipitation audio follows this state. The entrance credits the Île de Noirmoutier as Isabella Kohout’s inspiration. No claim of a literal depiction is made.
+
+
+## Navigation and time · 2026-10-27
+A clearly visible translated Show controls button remains in the hidden-interface state; tapping the landscape or Escape also restores controls. Browser Back and Forward restore logical screens, scene settings, guide progress, and interface visibility. Restart resets to the arrival horizon, clears active exercises and pending timers, and turns sound off while retaining language and volume preferences. History contains screen transitions rather than every cue.
+Guide choices show their durations. During guidance, a quiet total-time countdown appears above the instruction, while each breathing phase counts its own remaining seconds. Pause freezes both guide timing and motion. The five-minute journey retains 120 seconds of optional paced breathing; the standalone breath guide is 174 seconds including introduction and closing.

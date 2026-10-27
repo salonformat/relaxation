@@ -179,3 +179,8 @@ Autumn lake leaves are cut from the approved orchard image, fall, turn, settle a
 ## Scene consistency and quieter detail · 2026-10-27
 Copy is resolved per scene as a complete dictionary: the window choice hint, both breathing cues, journey introduction and exercise explanation refer to changing daylight. Lake and sea retain water cues. Completed-exercise explanations retain their original scene through later place/language changes. Winter precipitation is labelled Schnee / Snow / Neige; clear winter weather has no falling precipitation, while the precipitation option renders snow with no rain rings or rain/drop sound layers.
 The intro carries a small translated Noirmoutier inspiration credit attributed to Isabella Kohout. Fine bright outlines within foliage and rocks are softened towards nearby paint colours at render time; broad composition and source artwork remain.
+
+
+## Navigation and time · 2026-10-27
+A clearly visible translated Show controls button remains in the hidden-interface state; tapping the landscape or Escape also restores controls. Browser Back and Forward restore logical screens, scene settings, guide progress, and interface visibility. Restart resets to the arrival horizon, clears active exercises and pending timers, and turns sound off while retaining language and volume preferences. History contains screen transitions rather than every cue.
+Guide choices show their durations. During guidance, a quiet total-time countdown appears above the instruction, while each breathing phase counts its own remaining seconds. Pause freezes both guide timing and motion. The five-minute journey retains 120 seconds of optional paced breathing; the standalone breath guide is 174 seconds including introduction and closing.
