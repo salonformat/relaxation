@@ -189,3 +189,7 @@ Guide choices show their durations. During guidance, a quiet total-time countdow
 ## Short breaks and return visits · 2026-10-27
 The journey now offers one or five minutes; the standalone breath exercise lasts one minute. The short journey loosens shoulders and offers two complete breathing cycles, without claiming to be a complete muscle-relaxation protocol. Rhythm choices are 4:6 or 5:5; phase words, explanatory text, timer, water and daylight share the selected pattern. The optional four-second soft closing tone plays only on natural completion. The selected practice settings and last confirmed scene are stored in localStorage; the intro offers a direct return to that scene. No account is needed.
 Intro ambient swells omit the narrow crest highlight strokes. A local synthetic German voice audition exists separately in audio-previews; it is not integrated or claimed to sound human. HeyGen was declined.
+
+
+## Voluntary guidance · 2026-10-27
+The entrance heading now states that nothing is required. After place confirmation, the scene stays open without a seven-second prompt or any automatic conversation. The footer’s guidance control is the only entrance to exercises. A brief translated reading note is shown before selecting a guided exercise. Natural scene motion and optional ambient audio continue in the stay mode; no timer is displayed there.

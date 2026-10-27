@@ -14,7 +14,7 @@ People whose day feels like too much, including the creator herself. They want s
 An immersive world that welcomes doing nothing. Working title: Heute ist alles ein bisschen viel.
 
 ## Capabilities and Constraints
-Three entrances: briefly go elsewhere, set down a full head, simply stay. Choose sea, countryside or city; seasons and rain. Slowly moving worlds. Optional sound and reduced motion. No streaks, timers, completion, scoring or promises of therapeutic outcomes. A tangled wool ball can be set down, without needing to solve it. Local project and GitHub repository named relaxation requested.
+Three entrances: briefly go elsewhere, set down a full head, simply stay. Choose sea, countryside or city; seasons and rain. Slowly moving worlds. Optional sound and reduced motion. No streaks, scoring or promises of therapeutic outcomes. Timers appear only within voluntarily chosen guidance. A tangled wool ball can be set down, without needing to solve it. Local project and GitHub repository named relaxation requested.
 
 ## Brand Commitments
 Salon Format is the creator's own design reference. Inspirations: Bobo Choses, Headspace, Calm, sea, rain, Casa Malaparte and the blue/red typography and cinematic aesthetic of Jean-Luc Godard, especially Le Mépris and Une femme est une femme. Original work; no copying brand characters or interfaces. Very little writing.
@@ -58,3 +58,7 @@ Guide choices show their durations. During guidance, a quiet total-time countdow
 ## Short breaks and return visits · 2026-10-27
 The journey now offers one or five minutes; the standalone breath exercise lasts one minute. The short journey loosens shoulders and offers two complete breathing cycles, without claiming to be a complete muscle-relaxation protocol. Rhythm choices are 4:6 or 5:5; phase words, explanatory text, timer, water and daylight share the selected pattern. The optional four-second soft closing tone plays only on natural completion. The selected practice settings and last confirmed scene are stored in localStorage; the intro offers a direct return to that scene. No account is needed.
 Intro ambient swells omit the narrow crest highlight strokes. A local synthetic German voice audition exists separately in audio-previews; it is not integrated or claimed to sound human. HeyGen was declined.
+
+
+## Quiet arrival · 2026-10-27
+The main entry promise is “Du musst gerade gar nichts.” / “There’s nothing you need to do.” / “Tu n’as rien à faire.” Choosing and confirming a place leads directly to staying there. No delayed invitation, exercise prompt or timer interrupts this mode. Guidance is available only through the visitor’s own action. Its choice screen explicitly says that instructions appear as text to read. Voice auditions remain separate and are not enabled. Returning from tab visibility changes or old browser-history states must not resurrect a timed invitation.
