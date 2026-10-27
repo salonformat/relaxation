@@ -9,7 +9,7 @@ function prepare(W,H,state){
  const key=[state.place,state.season,intro,W,H].join(':');if(cache.has(key))return cache.get(key);
  const image=state.season==='winter'?images[state.place].winter:images[state.place].base;if(!image)return null;
  const source=create(W,H),c=source.getContext('2d',{willReadFrequently:true});const tile=intro?[.02,.27,.68,.40]:[0,0,1,1];
- const sx=image.width*tile[0],sy=image.height*tile[1],sw=image.width*tile[2],sh=image.height*tile[3],scale=Math.max(W/sw,H/sh),dw=sw*scale,dh=sh*scale,dx=(W-dw)/2,dy=(H-dh)/2;
+ const sx=image.width*tile[0],sy=image.height*tile[1],sw=image.width*tile[2],sh=image.height*tile[3],scale=Math.max(W/sw,H/sh),dw=sw*scale,dh=sh*scale,dx=(W-dw)*(state.place==='city'?.88:.5),dy=(H-dh)/2;
  c.drawImage(image,sx,sy,sw,sh,dx,dy,dw,dh);
  const pixels=c.getImageData(0,0,W,H),waterData=c.createImageData(W,H),leafData=c.createImageData(W,H);let minY=H,maxY=0;
  const originalPixels=new Uint8ClampedArray(pixels.data);
@@ -35,7 +35,7 @@ function prepare(W,H,state){
   const isWater=state.place!=='city'&&originalY>.385&&originalY<.91&&g-r>25&&b-r>35&&b>=g*.98&&r<180;
   if(isWater){waterData.data[i+3]=255;minY=Math.min(minY,y);maxY=Math.max(maxY,y);}
   const green=g-r>3&&g-b>9,ochre=r-g>17&&g-b>18;
-  const isLeaf=originalY<.49&&(green||ochre);
+  const isLeaf=state.place!=='city'&&originalY<.49&&(green||ochre);
   const isCurtain=state.place==='city'&&originalX<.20&&r>180&&g>160;
   if(isLeaf||isCurtain)leafData.data[i+3]=255;
   if(isLeaf&&state.season!=='winter'){
@@ -67,7 +67,7 @@ function prepare(W,H,state){
   }
  }
  tc.putImageData(paint,0,0);
- const result={source,texture,mask,leafMask,minY,maxY};if(cache.size>=2)cache.delete(cache.keys().next().value);cache.set(key,result);return result;
+ const result={source,texture,mask,leafMask,minY,maxY,cup:{x:dx+dw*.785,y:dy+dh*.782,size:dw*.094},curtainReach:Math.max(0,dx+dw*.27),projection:{dx,dy,dw,dh}};if(cache.size>=2)cache.delete(cache.keys().next().value);cache.set(key,result);return result;
 }
 function waterMotion(data,W,H,time,state){
  wc.clearRect(0,0,W,H);
@@ -128,6 +128,18 @@ function waterMotion(data,W,H,time,state){
  }
  wc.globalCompositeOperation='destination-in';wc.drawImage(data.mask,0,0);wc.globalCompositeOperation='source-over';sc.drawImage(water,0,0);
 }
+function drawCupSteam(c,anchor,time,motionScale){
+ const size=anchor.size,driftTime=time*(.55+.45*motionScale);
+ c.save();c.filter=`blur(${Math.max(1.3,size*.025)}px)`;
+ // Overlapping translucent wisps rise from inside the rim and disperse.
+ for(let i=0;i<15;i++){
+  const age=(driftTime*.105+i/15)%1,rise=size*(.08+age*1.25)*(0.65+.35*motionScale);
+  const spread=size*(.025+age*.095),x=anchor.x+Math.sin(age*5.2+i*2.1+driftTime*.12)*spread;
+  const y=anchor.y-rise,opacity=Math.sin(Math.PI*age)*.20;
+  c.fillStyle=`rgba(226,229,214,${opacity})`;c.beginPath();c.ellipse(x,y,size*(.025+age*.065),size*(.045+age*.11),Math.sin(age*4+i)*.35,0,Math.PI*2);c.fill();
+ }
+ c.restore();
+}
 export function drawLivingWorld(ctx,W,H,time,state){
  W=Math.round(W);H=Math.round(H);const data=prepare(W,H,state);if(!data)return;
  if(stage.width!==W||stage.height!==H)for(const c of [stage,water,leaves]){c.width=W;c.height=H;}
@@ -142,9 +154,20 @@ export function drawLivingWorld(ctx,W,H,time,state){
 
  if(state.place!=='city')waterMotion(data,W,H,time,state);
  if(state.place==='city'){
+  if(state.wind&&data.curtainReach>0){
+   const reach=Math.min(W,data.curtainReach),strength=(state.motionScale??1)*(state.breathing?.55:1);
+   // An opaque continuous mesh bends the existing curtain: no translucent duplicate.
+   const bend=(x,y)=>Math.sin(x/reach*Math.PI)*(Math.sin(time*.43+y/H*.8)*4+Math.sin(time*.19)*1.5)*(y/H)**1.3*strength;
+   for(let y=0;y<H;y+=8)for(let x=0;x<reach;x+=16){const right=Math.min(reach,x+16),leftTo=x+bend(x,y),rightTo=right+bend(right,y);sc.drawImage(data.source,x,y,right-x,Math.min(8,H-y),leftTo,y,rightTo-leftTo,Math.min(8,H-y));}
+  }
   const breath=state.breathAmount||0,light=.012+(Math.sin(time*.22)+1)*.008+breath*.11;
   const wash=sc.createLinearGradient(0,0,W*.25,H*.76);wash.addColorStop(0,`rgba(221,226,204,${light})`);wash.addColorStop(1,'rgba(221,226,204,0)');sc.fillStyle=wash;sc.fillRect(0,0,W,H);
  }
+ if(state.place==='city')drawCupSteam(sc,data.cup,time,state.motionScale??1);
  ctx.drawImage(stage,0,0,W,H);
 }
 export function worldIsReady(place){return !!images[place]?.winter;}
+
+export function cupPosition(W,H,state){return prepare(W,H,state)?.cup||null;}
+
+export function sceneProjection(W,H,state){return prepare(W,H,state)?.projection||null;}

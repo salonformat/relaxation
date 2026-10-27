@@ -1,3 +1,4 @@
+import {ambienceFor} from './audio-profile.js';
 // Layered procedural ambience. No microphone, voice or external audio requests.
 export class Soundscape {
  constructor(){this.context=null;this.enabled=false;this.volume=.45;this.voices={};this.level=0;this.breath=0;this.lastUpdate=-1;this.currentScene={place:'sea',weather:'clear',wind:true,season:'summer'};}
@@ -19,6 +20,8 @@ export class Soundscape {
    voice('rain',rain,'lowpass',3900,-.18);
    voice('leaves',air,'bandpass',2200,.42);
    voice('wind',deep,'bandpass',480,-.12);
+   voice('lapping',deep,'bandpass',620,.2);
+   voice('rainRoof',deep,'bandpass',850,-.2);
    // Distant drops land at irregular intervals with soft, resonant decays.
    const drops=a.createBuffer(2,a.sampleRate*23,a.sampleRate);
    for(let ch=0;ch<2;ch++){const out=drops.getChannelData(ch);for(let at=.2;at<22.7;at+=.08+Math.random()*.65){const start=Math.floor(at*a.sampleRate),length=Math.floor(a.sampleRate*(.018+Math.random()*.05)),pitch=650+Math.random()*1500,amp=.05+Math.random()*.12;for(let j=0;j<length&&start+j<out.length;j++){const env=Math.sin(Math.PI*j/length)*Math.exp(-j/length*5);out[start+j]+=((Math.random()*2-1)*.7+Math.sin(j/a.sampleRate*pitch*6.283)*.3)*env*amp;}}}
@@ -42,16 +45,10 @@ export class Soundscape {
  scene(state){this.currentScene={...state};this.lastUpdate=-1;this.update(this.visualTime||0,state);}
  update(time,state=this.currentScene){
   this.visualTime=time;if(!this.context||!this.enabled||Math.abs(time-this.lastUpdate)<.12)return;this.lastUpdate=time;
-  const t=this.context.currentTime,sea=state.place==='sea',lake=state.place==='country',winter=state.season==='winter',rain=state.weather==='rain'&&!winter;
-  // A long surge shared with the visible swell, varied by two slower currents.
-  const surge=(.5+.5*Math.sin(time*.58-1.3))**1.7;
-  const drift=.78+.13*Math.sin(time*.137)+.09*Math.sin(time*.233+2);
-  const breath=this.breath*.055,level=winter?.76:1;
-  const gains={depth:sea?(.21+surge*.10)*level:lake?.075:0,wash:sea?(.18+surge*.34+breath)*drift*level:lake?.055:0,foam:sea?(.018+surge*.075)*drift:lake?.004:0,rain:rain?(state.place==='city'?.19:.14)*(.9+.1*Math.sin(time*.19)):0,leaves:rain?.023*(1+.25*Math.sin(time*.37)):0,drops:rain?(state.place==='city'?.55:.27):0,wind:state.wind?(.045+.035*(.5+.5*Math.sin(time*.21))):.008};
-  for(const [name,value]of Object.entries(gains))this.voices[name].volume.gain.setTargetAtTime(value,t,winter&&['rain','drops','leaves'].includes(name)?.25:.6);
-  this.voices.wash.filter.frequency.setTargetAtTime(700+surge*1000+this.breath*180,t,.8);
-  this.voices.foam.filter.frequency.setTargetAtTime(1300+surge*950,t,.8);
-  this.voices.rain.filter.frequency.setTargetAtTime(state.place==='city'?2600:4200,t,1.5);
+  const t=this.context.currentTime,profile=ambienceFor(state,time,this.breath);
+  for(const [name,value]of Object.entries(profile.gains))this.voices[name].volume.gain.setTargetAtTime(value,t,profile.winter&&['rain','rainRoof','drops','leaves'].includes(name)?.25:.8);
+  for(const [name,value]of Object.entries(profile.filters))this.voices[name].filter.frequency.setTargetAtTime(value,t,.9);
+
  }
  breathe(amount,enabled){this.breath=enabled?amount:0;}
  hide(hidden){if(this.context)this.master.gain.setTargetAtTime(hidden||!this.enabled?0:this.volume,this.context.currentTime,.5);}

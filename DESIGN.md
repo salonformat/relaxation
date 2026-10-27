@@ -193,3 +193,9 @@ Intro ambient swells omit the narrow crest highlight strokes. A local synthetic 
 
 ## Voluntary guidance · 2026-10-27
 The entrance heading now states that nothing is required. After place confirmation, the scene stays open without a seven-second prompt or any automatic conversation. The footer’s guidance control is the only entrance to exercises. A brief translated reading note is shown before selecting a guided exercise. Natural scene motion and optional ambient audio continue in the stay mode; no timer is displayed there.
+
+
+## Window atmosphere and responsive spacing · 2026-10-27
+The window keeps its cup in frame on mobile and tablet crops. Slow translucent steam rises from the cup rim and disperses. The visible curtain bends subtly with wind; pause freezes both. Rain/snow are clipped to the outdoor opening and excluded from the indoor cup and frame. City architecture is excluded from foliage recolouring.
+Procedural ambience now has distinct surf, lake lapping, outdoor leaf rustle, muffled indoor rain/roof texture and wind profiles. Turning wind off silences wind and leaf layers; winter has no rain/drop/roof layers. Tab hiding and sound controls still fade the ambience.
+Tablet widths use icon-only scene controls to leave the language switch clear. The guide chooser fits between header and footer and scrolls internally on small or short screens. Text collision checks cover eight representative viewport sizes, three languages and entry/choice/guide states; the signature’s authored stacked lettering and line boxes belonging to the same heading are treated as single text components.

@@ -50,3 +50,10 @@ Laut vorliegenden Prüfberichten bestanden die drei Sprachfassungen die Layout-,
 - `RESEARCH.md`: gestalterische und inhaltliche Quellen
 
 Lokal und für das private GitHub-Repository vorgesehen; keine öffentliche Bereitstellung. Keine Anmeldung, Analysewerkzeuge oder Fortschrittsmechanik.
+
+
+## Public website
+
+https://salonformat.github.io/relaxation/
+
+GitHub Pages publishes `dist/` using `.github/workflows/pages.yml` after script checks and behaviour tests pass. Audio auditions and local export materials are not part of the deployed site.

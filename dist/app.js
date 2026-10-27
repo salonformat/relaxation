@@ -2,7 +2,7 @@ import {practiceCopy} from './practice-options.js';
 import {copyForScene} from './scene-copy.js';
 import {breathAt} from './breath-rhythm.js';
 import {copy,makeGuides,applyCopy} from './copy.js';
-import {drawLivingWorld} from './living-world.js';
+import {drawLivingWorld,sceneProjection} from './living-world.js';
 import {drawFallingLeaves} from './nature-motion.js';
 import {Soundscape} from './sound.js';
 let navigationReady=false,restoringNavigation=false;
@@ -26,7 +26,14 @@ const particles=Array.from({length:150},(_,i)=>({x:hash(i+1),y:hash(i+1000),spee
 function drawWorld(){drawLivingWorld(ctx,W,H,time,state);}
 function drawWeather(){
  wc.clearRect(0,0,W,H);const snow=state.season==='winter'&&state.weather==='rain',rain=state.weather==='rain'&&!snow;
- if(state.place==='city'){wc.save();wc.beginPath();wc.moveTo(W*.17,0);wc.lineTo(W*.88,0);wc.lineTo(W*.88,H*.83);wc.lineTo(W*.09,H*.88);wc.closePath();wc.clip();}
+ if(state.place==='city'){
+  const projection=sceneProjection(W,H,state);if(!projection)return;
+  const {dx,dy,dw,dh}=projection;wc.save();wc.beginPath();
+  for(const [i,point]of [[.21,0],[.83,0],[.83,.827],[.13,.889]].entries()){const x=dx+point[0]*dw,y=dy+point[1]*dh;i?wc.lineTo(x,y):wc.moveTo(x,y);}wc.closePath();
+  // Precipitation stays outside: the indoor cup and the window frame stay dry.
+  wc.rect(dx+dw*.728,dy+dh*.757,dw*.139,dh*.158);wc.clip('evenodd');
+ }
+
  if(snow||rain)for(const p of particles){const z=p.size/3,y=((p.y+time*p.speed*(snow?.12:1))%1)*H,x=(p.x*W+(state.wind?Math.sin(time*.3+p.y*15)*(snow?35:4):0)+W)%W;if(snow){wc.fillStyle=`rgba(240,242,234,${.4+z*.45})`;wc.beginPath();wc.arc(x,y,p.size,0,7);wc.fill();}else{wc.strokeStyle=`rgba(205,222,223,${.14+z*.35})`;wc.lineWidth=.5+z*.7;wc.beginPath();wc.moveTo(x,y);wc.lineTo(x-(state.wind?4:1),y+p.len*(.6+z));wc.stroke();}}
  if(state.place==='city')wc.restore();
  drawFallingLeaves(wc,W,H,time,state);

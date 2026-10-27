@@ -47,3 +47,8 @@ body.talking .shade,body.guiding .shade{background:#112c34;opacity:.46}.topbar::
 
 .reading-note{font-size:14px;line-height:1.5;text-align:center;color:var(--paper);margin:-15px 0 22px}#welcome h1{max-width:1050px;margin-inline:auto}#guide-choice h2{margin-bottom:25px}
 @media(max-width:480px){.reading-note{font-size:12px;margin:-10px 0 15px}#guide-choice h2{margin-bottom:21px}#welcome h1{font-size:clamp(40px,11vw,56px)}}
+/* Keep the language selector clear of the scene controls on tablet widths. */
+@media(max-width:1200px){.tools .tool span{display:none}.volume,.rain-toggle{display:none}.tools{gap:18px}}
+#guide-choice{top:50%;max-height:calc(100dvh - 190px)}
+@media(max-width:480px){#guide-choice{top:50%;max-height:calc(100dvh - 170px)}.tools{gap:12px}}
+@media(max-height:500px){#welcome{top:52%}#welcome h1{font-size:clamp(30px,4.5vw,48px);line-height:1.15}#welcome .line-button{margin-top:18px}.return-place{margin-top:6px}.inspiration{bottom:12px;font-size:10px}}

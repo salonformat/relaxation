@@ -62,3 +62,9 @@ Intro ambient swells omit the narrow crest highlight strokes. A local synthetic 
 
 ## Quiet arrival · 2026-10-27
 The main entry promise is “Du musst gerade gar nichts.” / “There’s nothing you need to do.” / “Tu n’as rien à faire.” Choosing and confirming a place leads directly to staying there. No delayed invitation, exercise prompt or timer interrupts this mode. Guidance is available only through the visitor’s own action. Its choice screen explicitly says that instructions appear as text to read. Voice auditions remain separate and are not enabled. Returning from tab visibility changes or old browser-history states must not resurrect a timed invitation.
+
+
+## Window atmosphere and responsive spacing · 2026-10-27
+The window keeps its cup in frame on mobile and tablet crops. Slow translucent steam rises from the cup rim and disperses. The visible curtain bends subtly with wind; pause freezes both. Rain/snow are clipped to the outdoor opening and excluded from the indoor cup and frame. City architecture is excluded from foliage recolouring.
+Procedural ambience now has distinct surf, lake lapping, outdoor leaf rustle, muffled indoor rain/roof texture and wind profiles. Turning wind off silences wind and leaf layers; winter has no rain/drop/roof layers. Tab hiding and sound controls still fade the ambience.
+Tablet widths use icon-only scene controls to leave the language switch clear. The guide chooser fits between header and footer and scrolls internally on small or short screens. Text collision checks cover eight representative viewport sizes, three languages and entry/choice/guide states; the signature’s authored stacked lettering and line boxes belonging to the same heading are treated as single text components.
