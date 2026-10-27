@@ -17,6 +17,13 @@ function prepare(W,H,state){
  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
   const i=(y*W+x)*4,originalY=tile[1]+((y-dy)/dh)*tile[3],originalX=tile[0]+((x-dx)/dw)*tile[2];
   let r=pixels.data[i],g=pixels.data[i+1],b=pixels.data[i+2];
+  // Remove the pale illustration seam at the lake horizon by extending the
+  // neighbouring water colour into that narrow line, leaving hills untouched.
+  if(state.place==='country'&&state.season!=='winter'&&originalY>.475&&originalY<.515&&originalX<.66&&r>180&&g>170&&b>135){
+   const below=Math.min(H-1,y+Math.max(2,Math.ceil(8*scale))),j=(below*W+x)*4;
+   const nr=originalPixels[j],ng=originalPixels[j+1],nb=originalPixels[j+2];
+   if(ng-nr>20&&nb-nr>30){r=nr;g=ng;b=nb;}
+  }
   if(state.place!=='city'&&(originalY>.73||(originalY<.34&&originalX>.23))&&r>180&&g>165&&b>140&&Math.max(r,g,b)-Math.min(r,g,b)<70){
    let best=r+g+b,near=null;const radius=Math.max(2,Math.round(W/500));
    for(const [ox,oy]of [[-radius,0],[radius,0],[0,-radius],[0,radius]]){
