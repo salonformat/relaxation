@@ -1,3 +1,4 @@
+import {practiceCopy} from './practice-options.js';
 import {copyForScene} from './scene-copy.js';
 import {breathAt} from './breath-rhythm.js';
 import {copy,makeGuides,applyCopy} from './copy.js';
@@ -7,10 +8,19 @@ import {Soundscape} from './sound.js';
 let navigationReady=false,restoringNavigation=false;
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');
-const state={place:'sea',season:'summer',weather:'clear',wind:true,portalOpen:false,mode:'welcome',paused:false,motionScale:reduced.matches?.35:1,sound:false,bare:false,breathing:false,breathAmount:0,look:{x:0,y:0},ripple:{x:0,y:0,at:-100},guide:null,guideElapsed:0};
+const state={place:'sea',season:'summer',weather:'clear',wind:true,portalOpen:false,mode:'welcome',paused:false,motionScale:reduced.matches?.35:1,sound:false,journeyDuration:60,breathPattern:'4-6',endSound:true,bare:false,breathing:false,breathAmount:0,look:{x:0,y:0},ripple:{x:0,y:0,at:-100},guide:null,guideElapsed:0};
 const canvas=$('#landscape'),ctx=canvas.getContext('2d'),weather=$('#weather'),wc=weather.getContext('2d'),sound=new Soundscape();
-let language='de';try{language=localStorage.getItem('relaxation-language')||'de';}catch{}language=new URLSearchParams(location.search).get('lang')||language;if(!copy[language])language='de';let t=copyForScene(language,state.place,state.season),labels=t.places,guides=makeGuides(t);
-let W=innerWidth,H=innerHeight,dpr=Math.min(devicePixelRatio||1,2),time=0,last=0,lastDraw=0,arrivalTimer=null,closingTimer=null,cueIndex=-1,breathStart=0,lastBreathWord='',pickSound=true,look={x:0,y:0},lastGuide=null,lastGuidePlace=null;
+let favorite=null;
+try{
+ const preferences=JSON.parse(localStorage.getItem('relaxation-practice')||'null');
+ if(preferences){state.journeyDuration=preferences.duration===300?300:60;state.breathPattern=preferences.pattern==='5-5'?'5-5':'4-6';state.endSound=preferences.endSound!==false;}
+ const saved=JSON.parse(localStorage.getItem('relaxation-place')||'null');
+ if(saved&&['sea','country','city'].includes(saved.place)&&['spring','summer','autumn','winter'].includes(saved.season)&&['clear','rain'].includes(saved.weather))favorite=saved;
+}catch{}
+function sceneText(lang,place,season,duration=state.journeyDuration,pattern=state.breathPattern){return practiceCopy(copyForScene(lang,place,season),lang,place,duration,pattern);}
+function savePractice(){try{localStorage.setItem('relaxation-practice',JSON.stringify({duration:state.journeyDuration,pattern:state.breathPattern,endSound:state.endSound}));}catch{}}
+let language='de';try{language=localStorage.getItem('relaxation-language')||'de';}catch{}language=new URLSearchParams(location.search).get('lang')||language;if(!copy[language])language='de';let t=sceneText(language,state.place,state.season),labels=t.places,guides=makeGuides(t,state.journeyDuration);
+let W=innerWidth,H=innerHeight,dpr=Math.min(devicePixelRatio||1,2),time=0,last=0,lastDraw=0,arrivalTimer=null,closingTimer=null,cueIndex=-1,breathStart=0,lastBreathWord='',pickSound=true,look={x:0,y:0},lastGuide=null,lastGuidePlace=null,lastGuidePattern='4-6',lastGuideDuration=60;
 const hash=n=>{const v=Math.sin(n*127.1+311.7)*43758.5453;return v-Math.floor(v);};
 const particles=Array.from({length:150},(_,i)=>({x:hash(i+1),y:hash(i+1000),speed:.04+hash(i+90)*.085,size:.7+hash(i+40)*2.1,len:10+hash(i+20)*16}));
 function drawWorld(){drawLivingWorld(ctx,W,H,time,state);}
@@ -26,10 +36,10 @@ function setBreathing(value){state.breathing=value;if(value){breathStart=time;$(
 function updateBreath(){
  if(state.breathing){
   // Text and surface share this exact phase. No delayed interpolation at turns.
-  const elapsed=Math.max(0,state.guideElapsed-guides[state.guide].breathAt),{phase,inhale,amount}=breathAt(elapsed);
+  const elapsed=Math.max(0,state.guideElapsed-guides[state.guide].breathAt),{phase,inhale,amount}=breathAt(elapsed,state.breathPattern==='5-5'?5:4);
   const word=inhale?t.inhale:t.exhale;
   $('#breath-word').textContent=word;
-  $('#breath-duration').textContent=`${Math.max(1,Math.ceil(inhale?4-phase:10-phase))} s`;
+  $('#breath-duration').textContent=`${Math.max(1,Math.ceil(inhale?(state.breathPattern==='5-5'?5:4)-phase:10-phase))} s`;
   state.breathPhase=inhale?'in':'out';state.breathSeconds=phase;
   state.breathAmount=amount;
  }else state.breathAmount*=.94;
@@ -55,31 +65,36 @@ function clearArrival(){clearTimeout(arrivalTimer);arrivalTimer=null;}
 function showInvitation(){if(state.bare||!$('#places').hidden)return;state.mode='invitation';hideConversations();$('#invitation').hidden=false;document.body.classList.add('talking');$('#just-stay').focus({preventScroll:true});recordNavigation(false);}
 function simplyStay(){clearArrival();stopGuide(false);hideConversations();state.mode='stay';$('#companionship').focus({preventScroll:true});}
 function showGuideChoice(){clearArrival();stopGuide(false);hideConversations();state.mode='choice';$('#guide-choice').hidden=false;document.body.classList.add('talking');$('[data-guide=journey]').focus({preventScroll:true});}
-function startGuide(key){clearArrival();clearTimeout(closingTimer);stopGuide(false);hideConversations();state.skipBreath=false;state.mode='guide';document.body.classList.add('guiding');state.guide=key;state.guideElapsed=0;cueIndex=-1;lastGuide=key;lastGuidePlace=state.place;$('#guidance').hidden=false;$('#technique-toggle').hidden=true;updateGuidance(0);$('#stop-guide').focus({preventScroll:true});}
+function startGuide(key){if(state.endSound)sound.prepare().catch(()=>{});clearArrival();clearTimeout(closingTimer);stopGuide(false);hideConversations();state.skipBreath=false;state.mode='guide';document.body.classList.add('guiding');state.guide=key;state.guideElapsed=0;cueIndex=-1;lastGuide=key;lastGuidePlace=state.place;lastGuidePattern=state.breathPattern;lastGuideDuration=state.journeyDuration;$('#guidance').hidden=false;$('#technique-toggle').hidden=true;updateGuidance(0);$('#stop-guide').focus({preventScroll:true});}
 function stopGuide(showEnding=false){document.body.classList.remove('guiding');state.guide=null;state.guideElapsed=0;cueIndex=-1;setBreathing(false);$('#guidance').hidden=true;if(showEnding)finishGuide();}
-function finishGuide(){state.guide=null;setBreathing(false);hideConversations();state.mode='stay';$('#closing').hidden=false;$('#technique-toggle').hidden=!lastGuide;closingTimer=setTimeout(()=>$('#closing').hidden=true,11000);$('#companionship').focus({preventScroll:true});recordNavigation(false);}
+function finishGuide(){if(state.endSound&&!document.hidden)sound.chime();state.guide=null;setBreathing(false);hideConversations();state.mode='stay';$('#closing').hidden=false;$('#technique-toggle').hidden=!lastGuide;closingTimer=setTimeout(()=>$('#closing').hidden=true,11000);$('#companionship').focus({preventScroll:true});recordNavigation(false);}
 function togglePlaces(force){const open=typeof force==='boolean'?force:$('#places').hidden;$('#places').hidden=!open;$('#place-toggle').setAttribute('aria-expanded',String(open));document.body.classList.toggle('choosing',open);if(open){clearArrival();stopGuide(false);hideConversations();$('#close-places').focus({preventScroll:true});}}
 function transitionScene(){const c=$('#transition-world');c.getAnimations().forEach(a=>a.cancel());c.getContext('2d').clearRect(0,0,c.width,c.height);c.style.opacity='0';}
-function sync(){$('#restart').hidden=!state.portalOpen&&state.mode==='welcome';t=copyForScene(language,state.place,state.season);labels=t.places;guides=makeGuides(t);applyCopy(language,t);for(const el of $$('[data-guide-duration]'))el.textContent=clockText(guides[el.dataset.guideDuration].end);updateGuideTimer();document.body.dataset.scene=state.place;document.body.dataset.season=state.season;$('#place-name').textContent=labels[state.place];for(const key of ['place','season','weather'])$$(`button[data-${key}]`).forEach(b=>b.setAttribute('aria-pressed',String(b.dataset[key]===state[key])));$('#choose-wind').setAttribute('aria-pressed',String(state.wind));drawWorld();drawWeather();sound.scene(state);}
+function sync(){$('#restart').hidden=!state.portalOpen&&state.mode==='welcome';t=sceneText(language,state.place,state.season);labels=t.places;guides=makeGuides(t,state.journeyDuration);applyCopy(language,t);$('#breath-pattern').value=state.breathPattern;$('#end-sound').checked=state.endSound;$$('[data-journey-duration]').forEach(el=>el.setAttribute('aria-pressed',String(Number(el.dataset.journeyDuration)===state.journeyDuration)));$('#return-place').hidden=!favorite;if(favorite)$('#return-place').textContent=t.returnPlaces[favorite.place];for(const el of $$('[data-guide-duration]'))el.textContent=clockText(guides[el.dataset.guideDuration].end);updateGuideTimer();document.body.dataset.scene=state.place;document.body.dataset.season=state.season;$('#place-name').textContent=labels[state.place];for(const key of ['place','season','weather'])$$(`button[data-${key}]`).forEach(b=>b.setAttribute('aria-pressed',String(b.dataset[key]===state[key])));$('#choose-wind').setAttribute('aria-pressed',String(state.wind));drawWorld();drawWeather();sound.scene(state);}
 async function setSound(value){try{if(value){await sound.start();sound.scene(state);}else sound.stop();state.sound=value;$('#sound').setAttribute('aria-pressed',String(value));$('#sound').setAttribute('aria-label',value?t.soundOffAria:t.soundOnAria);$('#sound span').textContent=value?t.soundOn:t.soundOff;}catch{state.sound=false;announce(t.soundError);$('#sound span').textContent=t.soundRetry;}}
 $('#begin').addEventListener('click',()=>{transitionScene();document.body.classList.add('portal-open');state.portalOpen=true;setSound(pickSound);togglePlaces(true);sync();});$('#place-toggle').addEventListener('click',()=>togglePlaces());$('#close-places').addEventListener('click',()=>{togglePlaces(false);(state.mode==='welcome'?$('#begin'):$('#place-toggle')).focus();});
 $$('button[data-place]').forEach(b=>b.addEventListener('click',()=>{transitionScene();state.place=b.dataset.place;state.season=state.place==='country'?'autumn':'summer';state.weather=state.place==='city'?'rain':'clear';sync();}));
 $$('button[data-season]').forEach(b=>b.addEventListener('click',()=>{transitionScene();state.season=b.dataset.season;sync();}));$$('button[data-weather]').forEach(b=>b.addEventListener('click',()=>{state.weather=b.dataset.weather;sync();}));
 $('#choose-wind').addEventListener('click',()=>{state.wind=!state.wind;sync();});$('#choose-sound').addEventListener('click',()=>{pickSound=!pickSound;$('#choose-sound').setAttribute('aria-pressed',String(pickSound));});
-$('#arrive').addEventListener('click',()=>{clearArrival();stopGuide(false);hideConversations();state.mode='arriving';$('#welcome').hidden=true;$('.bottom').hidden=false;document.body.classList.add('inside');togglePlaces(false);setSound(pickSound);$('#companionship').focus({preventScroll:true});arrivalTimer=setTimeout(()=>{arrivalTimer=null;if(state.mode==='arriving'&&!document.hidden)showInvitation();},7000);announce(labels[state.place]);});
+function arrive(){favorite={place:state.place,season:state.season,weather:state.weather,wind:state.wind};try{localStorage.setItem('relaxation-place',JSON.stringify(favorite));}catch{}clearArrival();stopGuide(false);hideConversations();state.mode='arriving';$('#welcome').hidden=true;$('.bottom').hidden=false;document.body.classList.add('inside');togglePlaces(false);setSound(pickSound);$('#companionship').focus({preventScroll:true});arrivalTimer=setTimeout(()=>{arrivalTimer=null;if(state.mode==='arriving'&&!document.hidden)showInvitation();},7000);announce(labels[state.place]);}
+$('#arrive').addEventListener('click',arrive);
+$('#return-place').addEventListener('click',()=>{if(!favorite)return;Object.assign(state,favorite,{portalOpen:true});document.body.classList.add('portal-open');sync();arrive();});
+$$('[data-journey-duration]').forEach(el=>el.addEventListener('click',()=>{state.journeyDuration=Number(el.dataset.journeyDuration);savePractice();sync();}));
+$('#breath-pattern').addEventListener('change',()=>{state.breathPattern=$('#breath-pattern').value;savePractice();sync();});
+$('#end-sound').addEventListener('change',()=>{state.endSound=$('#end-sound').checked;savePractice();});
 $('#just-stay').addEventListener('click',simplyStay);$('#no-guide').addEventListener('click',simplyStay);$('#show-guides').addEventListener('click',showGuideChoice);$('#companionship').addEventListener('click',showGuideChoice);$$('[data-guide]').forEach(b=>b.addEventListener('click',()=>startGuide(b.dataset.guide)));$('#stop-guide').addEventListener('click',()=>{stopGuide(false);hideConversations();state.mode='stay';$('#companionship').focus();});
 $('#sound').addEventListener('click',()=>setSound(!state.sound));$('#volume').addEventListener('input',e=>sound.setVolume(Number(e.target.value)/100));sound.setVolume(.45);
 function setPaused(value){state.paused=value;document.body.classList.toggle('paused',value);$('#motion').setAttribute('aria-pressed',String(value));$('#motion').setAttribute('aria-label',value?t.resumeAria:t.pauseAria);$('#motion span').textContent=value?t.resume:t.pause;$('#motion svg').innerHTML=value?'<path d="m8 5 11 7-11 7z"/>':'<path d="M9 6v12M15 6v12"/>';drawWorld();drawWeather();}
 $('#motion').addEventListener('click',()=>setPaused(!state.paused));reduced.addEventListener('change',e=>{state.motionScale=e.matches?.35:1;drawWorld();});
 function bare(value){state.bare=value;document.body.classList.toggle('bare',value);$('.topbar').inert=value;$('.bottom').inert=value;$('main').inert=value;$('#restore-interface').hidden=!value;if(value){clearArrival();togglePlaces(false);$('#restore-interface').focus({preventScroll:true});}else $('#hide-interface').focus({preventScroll:true});}
 $('#hide-interface').addEventListener('click',()=>bare(true));$('#restore-interface').addEventListener('click',restoreControls);
-$('#technique-toggle').addEventListener('click',()=>{if(!lastGuide)return;$('#technique-title').textContent=guides[lastGuide].name;$('#technique-text').textContent=makeGuides(copyForScene(language,lastGuidePlace))[lastGuide].about;$('#technique-source').href=lastGuide==='journey'?'https://www.nccih.nih.gov/health/relaxation-techniques-what-you-need-to-know':lastGuide==='breath'?'https://pmc.ncbi.nlm.nih.gov/articles/PMC10395759/':lastGuide==='senses'?'https://www.nhsinform.scot/healthy-living/mental-wellbeing/breathing-and-relaxation-exercises/':'https://www.gesundheit.gv.at/leben/stress/entspannt-bleiben.html';$('#technique-source').textContent=t.source;$('#technique').showModal();});$('#close-technique').addEventListener('click',()=>$('#technique').close());
+$('#technique-toggle').addEventListener('click',()=>{if(!lastGuide)return;$('#technique-title').textContent=guides[lastGuide].name;$('#technique-text').textContent=makeGuides(sceneText(language,lastGuidePlace,undefined,lastGuideDuration,lastGuidePattern),lastGuideDuration)[lastGuide].about;$('#technique-source').href=lastGuide==='journey'?'https://www.nccih.nih.gov/health/relaxation-techniques-what-you-need-to-know':lastGuide==='breath'?'https://pmc.ncbi.nlm.nih.gov/articles/PMC10395759/':lastGuide==='senses'?'https://www.nhsinform.scot/healthy-living/mental-wellbeing/breathing-and-relaxation-exercises/':'https://www.gesundheit.gv.at/leben/stress/entspannt-bleiben.html';$('#technique-source').textContent=t.source;$('#technique').showModal();});$('#close-technique').addEventListener('click',()=>$('#technique').close());
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(state.bare)restoreControls();else if(!$('#places').hidden){togglePlaces(false);(state.mode==='welcome'?$('#begin'):$('#place-toggle')).focus();}else if(state.guide){stopGuide(false);state.mode='stay';}else if(['choice','invitation'].includes(state.mode))simplyStay();});
 document.addEventListener('pointerdown',e=>{if(!$('#places').hidden&&!$('#places').contains(e.target)&&!$('#place-toggle').contains(e.target)&&!e.target.closest('.language-switch')){togglePlaces(false);return;}if(['stay','guide','arriving'].includes(state.mode)&&!e.target.closest('button,a,aside,dialog,input'))state.ripple={x:e.clientX/W,y:e.clientY/H,at:time};});window.addEventListener('pointermove',e=>{if(state.mode==='welcome'||!$('#places').hidden)return;look={x:(e.clientX/W-.5)*2,y:(e.clientY/H-.5)*2};},{passive:true});
 document.addEventListener('visibilitychange',()=>{last=0;sound.hide(document.hidden);if(!document.hidden&&state.mode==='arriving'&&!arrivalTimer)showInvitation();});window.addEventListener('resize',resize,{passive:true});window.addEventListener('relaxation-art-ready',()=>{drawWorld();drawWeather();});
 window.relaxation={state,sound,get language(){return language},ready:()=>({audio:sound.context?.state,level:sound.measure()})};changeLanguage(language);resize();requestAnimationFrame(animate);
 
-function changeLanguage(lang){if(!copy[lang])return;language=lang;t=copyForScene(lang,state.place,state.season);labels=t.places;guides=makeGuides(t);try{localStorage.setItem('relaxation-language',lang);}catch{}applyCopy(lang,t);lastBreathWord='';if(state.breathing)updateBreath();setPaused(state.paused);$('#sound span').textContent=state.sound?t.soundOn:t.soundOff;$('#sound').setAttribute('aria-label',state.sound?t.soundOffAria:t.soundOnAria);sync();if(state.guide&&cueIndex>=0)$('#guide-line').textContent=guides[state.guide].cues[cueIndex].text;if(lastGuide&&!$('#technique').hidden){$('#technique-title').textContent=guides[lastGuide].name;$('#technique-text').textContent=makeGuides(copyForScene(language,lastGuidePlace))[lastGuide].about;$('#technique-source').textContent=t.source;}}
+function changeLanguage(lang){if(!copy[lang])return;language=lang;t=sceneText(lang,state.place,state.season);labels=t.places;guides=makeGuides(t,state.journeyDuration);try{localStorage.setItem('relaxation-language',lang);}catch{}applyCopy(lang,t);lastBreathWord='';if(state.breathing)updateBreath();setPaused(state.paused);$('#sound span').textContent=state.sound?t.soundOn:t.soundOff;$('#sound').setAttribute('aria-label',state.sound?t.soundOffAria:t.soundOnAria);sync();if(state.guide&&cueIndex>=0)$('#guide-line').textContent=guides[state.guide].cues[cueIndex].text;if(lastGuide&&!$('#technique').hidden){$('#technique-title').textContent=guides[lastGuide].name;$('#technique-text').textContent=makeGuides(sceneText(language,lastGuidePlace,undefined,lastGuideDuration,lastGuidePattern),lastGuideDuration)[lastGuide].about;$('#technique-source').textContent=t.source;}}
 $('#skip-breath').addEventListener('click',()=>{state.skipBreath=true;setBreathing(false);state.guideElapsed=guides[state.guide].breathUntil;cueIndex=-1;updateGuidance(0);$('#stop-guide').focus({preventScroll:true});});
 $$('[data-language]').forEach(b=>b.addEventListener('click',()=>changeLanguage(b.dataset.language)));
 $('#intro-rain').addEventListener('click',()=>{state.weather=state.weather==='rain'?'clear':'rain';$('#intro-rain').setAttribute('aria-pressed',String(state.weather==='rain'));sync();if(!state.sound)setSound(true);});
@@ -87,7 +102,7 @@ $('#intro-rain').addEventListener('click',()=>{state.weather=state.weather==='ra
 // Browser navigation stores logical screens, not animation frames or individual cues.
 
 function navigationSnapshot(){
- return {relaxationNavigation:1,navigationIndex:history.state?.navigationIndex||0,state:JSON.parse(JSON.stringify(state)),sections:Object.fromEntries(['welcome','invitation','guide-choice','guidance','closing','places'].map(id=>[id,!$('#'+id).hidden])),inside:document.body.classList.contains('inside'),lastGuide,lastGuidePlace,pickSound,cueIndex,technique:$('#technique').open};
+ return {relaxationNavigation:1,navigationIndex:history.state?.navigationIndex||0,state:JSON.parse(JSON.stringify(state)),sections:Object.fromEntries(['welcome','invitation','guide-choice','guidance','closing','places'].map(id=>[id,!$('#'+id).hidden])),inside:document.body.classList.contains('inside'),lastGuide,lastGuidePlace,lastGuidePattern,lastGuideDuration,pickSound,cueIndex,technique:$('#technique').open};
 }
 function navigationRoute(s){return [s.state.bare?'bare':'visible',s.technique?'info':'',s.sections.places?'places':s.state.mode,s.state.guide||''].join(':');}
 function recordNavigation(push=true){
@@ -99,7 +114,7 @@ function recordNavigation(push=true){
 function restoreNavigation(saved){
  if(saved?.relaxationNavigation!==1)return;
  restoringNavigation=true;clearArrival();clearTimeout(closingTimer);stopGuide(false);
- Object.assign(state,{portalOpen:false,skipBreath:false},saved.state);lastGuide=saved.lastGuide;lastGuidePlace=saved.lastGuidePlace;pickSound=saved.pickSound;cueIndex=saved.cueIndex;
+ Object.assign(state,{portalOpen:false,skipBreath:false,journeyDuration:60,breathPattern:'4-6',endSound:true},saved.state);lastGuide=saved.lastGuide;lastGuidePlace=saved.lastGuidePlace;lastGuidePattern=saved.lastGuidePattern||'4-6';lastGuideDuration=saved.lastGuideDuration||300;pickSound=saved.pickSound;cueIndex=saved.cueIndex;
  for(const [id,visible]of Object.entries(saved.sections))$('#'+id).hidden=!visible;
  for(const [name,value]of Object.entries({inside:saved.inside,'portal-open':!!state.portalOpen,choosing:saved.sections.places,talking:saved.sections.invitation||saved.sections['guide-choice'],guiding:!!state.guide,bare:state.bare}))document.body.classList.toggle(name,value);
  for(const selector of ['.topbar','.bottom','main'])$(selector).inert=state.bare;
@@ -110,7 +125,7 @@ function restoreNavigation(saved){
  if(state.guide){const g=guides[state.guide];$('#guide-line').textContent=cueIndex>=0?g.cues[cueIndex].text:'';updateGuidance(0);updateBreath();}
  $('#technique-toggle').hidden=!lastGuide;
  if($('#technique').open)$('#technique').close();
- if(saved.technique){$('#technique-text').textContent=makeGuides(copyForScene(language,lastGuidePlace))[lastGuide].about;$('#technique').showModal();}
+ if(saved.technique){$('#technique-text').textContent=makeGuides(sceneText(language,lastGuidePlace,undefined,lastGuideDuration,lastGuidePattern),lastGuideDuration)[lastGuide].about;$('#technique').showModal();}
  setSound(!!saved.state.sound);
  if(state.mode==='arriving'&&!state.bare)arrivalTimer=setTimeout(showInvitation,7000);
  const focus=state.bare?$('#restore-interface'):saved.sections.places?$('#close-places'):state.guide?$('#stop-guide'):saved.sections['guide-choice']?$('[data-guide=journey]'):saved.sections.invitation?$('#just-stay'):saved.inside?$('#companionship'):$('#begin');
@@ -134,7 +149,7 @@ $('#restart').addEventListener('click',restart);
 document.addEventListener('click',e=>{
  if(state.bare&&!e.target.closest('#restore-interface')){e.preventDefault();e.stopImmediatePropagation();restoreControls();}
 },true);
-const navigationControls='#begin,#arrive,#place-toggle,#close-places,#just-stay,#no-guide,#show-guides,#companionship,[data-guide],#stop-guide,#hide-interface,#restart,#technique-toggle,#close-technique';
+const navigationControls='#return-place,#begin,#arrive,#place-toggle,#close-places,#just-stay,#no-guide,#show-guides,#companionship,[data-guide],#stop-guide,#hide-interface,#restart,#technique-toggle,#close-technique';
 document.addEventListener('click',e=>{if(e.target.closest(navigationControls)&&navigationReady)history.replaceState(navigationSnapshot(),'');},true);
 document.addEventListener('click',e=>{if(e.target.closest(navigationControls))recordNavigation();});
 window.addEventListener('popstate',e=>restoreNavigation(e.state));

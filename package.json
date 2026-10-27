@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "node server.mjs",
     "start": "node server.mjs",
-    "check": "node --check dist/breath-rhythm.js && node --check dist/journey.js && node --check dist/nature-motion.js && node --check dist/copy.js && node --check dist/app.js && node --check dist/living-world.js && node --check dist/sound.js && node --check server.mjs && node --check dist/scene-copy.js",
-    "test": "node tests/breath-rhythm.mjs && node tests/scene-copy.mjs"
+    "check": "node --check dist/breath-rhythm.js && node --check dist/journey.js && node --check dist/nature-motion.js && node --check dist/copy.js && node --check dist/app.js && node --check dist/living-world.js && node --check dist/sound.js && node --check server.mjs && node --check dist/scene-copy.js && node --check dist/practice-options.js",
+    "test": "node tests/breath-rhythm.mjs && node tests/scene-copy.mjs && node tests/practice-options.mjs"
   },
   "type": "module"
 }

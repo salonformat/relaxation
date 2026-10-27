@@ -96,7 +96,7 @@ function waterMotion(data,W,H,time,state){
   wc.lineTo(W+8,y+width+amp*2);wc.lineTo(-4,y+width+amp*2);wc.closePath();wc.fill();
   // Uneven, broken highlights belong to the drawn surface, never a neon outline.
   wc.lineWidth=.6+z*1.5;wc.strokeStyle=`rgba(204,214,195,${fade*(.13+z*.22)})`;
-  for(let j=0;j<3;j++){
+  for(let j=0;j<(state.mode==='welcome'&&!state.portalOpen?0:3);j++){
    const start=W*((j*.37+n*.19)%1),length=W*(.08+z*.13);
    wc.beginPath();for(let x=start;x<Math.min(W,start+length);x+=5){const yy=crest(x);x===start?wc.moveTo(x,yy):wc.lineTo(x,yy);}wc.stroke();
   }

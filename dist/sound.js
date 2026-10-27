@@ -26,6 +26,17 @@ export class Soundscape {
   }
   await this.context.resume();this.enabled=true;this.lastUpdate=-1;this.master.gain.setTargetAtTime(this.volume,this.context.currentTime,1.2);
  }
+ async prepare(){if(!this.context){await this.start();this.stop();}else if(this.context.state==='suspended')await this.context.resume();}
+ chime(){
+  if(!this.context||this.context.state!=='running')return false;
+  const a=this.context,t=a.currentTime;
+  for(const [frequency,level]of [[392,.055],[587.33,.018]]){
+   const tone=a.createOscillator(),gain=a.createGain();tone.type='sine';tone.frequency.value=frequency;
+   gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(level*this.volume,t+.12);gain.gain.exponentialRampToValueAtTime(.00001,t+3.8);
+   tone.connect(gain);gain.connect(a.destination);tone.start(t);tone.stop(t+4);tone.onended=()=>{tone.disconnect();gain.disconnect();};
+  }
+  this.lastChime=t;return true;
+ }
  stop(){this.enabled=false;if(this.context)this.master.gain.setTargetAtTime(0,this.context.currentTime,.5);}
  setVolume(value){this.volume=value;if(this.context&&this.enabled)this.master.gain.setTargetAtTime(value,this.context.currentTime,.3);}
  scene(state){this.currentScene={...state};this.lastUpdate=-1;this.update(this.visualTime||0,state);}
