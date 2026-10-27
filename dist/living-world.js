@@ -31,7 +31,12 @@ function prepare(W,H,state){
   pixels.data[i+1]=(luminance*.26+g*.74)*.83*.955+48*.045;
   pixels.data[i+2]=(luminance*.26+b*.74)*.83*.955+54*.045;
  }
- c.putImageData(pixels,0,0);const mask=create(W,H),leafMask=create(W,H);mask.getContext('2d').putImageData(waterData,0,0);leafMask.getContext('2d').putImageData(leafData,0,0);
+ // Feather the water boundary inward so moving paint never drags a shore edge.
+ const distance=new Float32Array(W*H);
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){const k=y*W+x;distance[k]=waterData.data[k*4+3]?Math.min(x?distance[k-1]+1:0,y?distance[k-W]+1:0,100):0;}
+ for(let y=H-1;y>=0;y--)for(let x=W-1;x>=0;x--){const k=y*W+x;distance[k]=Math.min(distance[k],x<W-1?distance[k+1]+1:0,y<H-1?distance[k+W]+1:0);}
+ const edgeData=c.createImageData(W,H);for(let k=0;k<distance.length;k++)edgeData.data[k*4+3]=Math.max(0,Math.min(1,(distance[k]-10)/18))*255;
+ c.putImageData(pixels,0,0);const mask=create(W,H),leafMask=create(W,H);mask.getContext('2d').putImageData(edgeData,0,0);leafMask.getContext('2d').putImageData(leafData,0,0);
  // Extend water paint beneath the shoreline before displacement. Transparent
  // cut-outs would otherwise carry silhouettes of furniture or rocks into the sea.
  const texture=create(W,H),tc=texture.getContext('2d'),paint=new ImageData(new Uint8ClampedArray(pixels.data),W,H);
@@ -58,7 +63,7 @@ function waterMotion(data,W,H,time,state){
  for(let y=Math.max(0,data.minY);y<=data.maxY;y+=2){
   const z=Math.max(0,(y-data.minY)/depth),perspective=z*z;
   const surge=Math.sin(time*.58-z*7)*depth*.014+Math.sin(time*.31-z*4)*depth*.008;
-  const offset=(surge*strength-lift)*Math.min(1,z*5);
+  const offset=surge*strength*(state.breathing?.10:.25)*Math.min(1,z*5);
   const x=(Math.sin(time*.27-z*5)*W*.009+Math.sin(time*.43-z*11)*W*.003)*perspective*strength;
   const yy=Math.max(0,Math.min(data.maxY-2,Math.max(data.minY+1,y-offset)));
   wc.drawImage(data.texture,0,yy,W,2,x,y,W,2);
@@ -71,7 +76,7 @@ function waterMotion(data,W,H,time,state){
   const y=data.minY+depth*(.02+z*1.15)-lift*Math.min(1,phase*3);
   const amp=depth*(.004+z*.035)*strength;
   const width=depth*(.008+z*.095);
-  const fade=Math.sin(Math.PI*phase)**1.5;
+  const fade=Math.sin(Math.PI*phase)**1.5*(state.breathing?.22:1);
   const crest=x=>y+amp*(Math.sin(x/W*5.1+n*1.7+time*.12)+.3*Math.sin(x/W*11.3-n+time*.19));
   const wash=wc.createLinearGradient(0,y-amp,0,y+width+amp);
   wash.addColorStop(0,`rgba(156,190,185,${fade*.26})`);
@@ -88,13 +93,22 @@ function waterMotion(data,W,H,time,state){
   }
  }
  // One broad swell is the breath cue: a rising surface, not a separate symbol.
- if(breath>.001){
+ if(state.breathing||breath>.001){
+  wc.save();wc.globalAlpha=state.breathing?1:Math.min(1,breath*8);
   const y=data.minY+depth*(.75-breath*.32),amp=depth*.022;
   const glow=wc.createLinearGradient(0,y-amp,0,y+depth*.20);
-  glow.addColorStop(0,`rgba(181,204,191,${breath*.38})`);glow.addColorStop(1,'rgba(181,204,191,0)');
+  glow.addColorStop(0,`rgba(194,215,199,${.18+breath*.27})`);glow.addColorStop(1,'rgba(181,204,191,0)');
   wc.fillStyle=glow;wc.beginPath();
-  for(let x=-8;x<=W+8;x+=8){const yy=y+Math.sin(x/W*5.4+time*.10)*amp;x===-8?wc.moveTo(x,yy):wc.lineTo(x,yy);}
+  for(let x=-8;x<=W+8;x+=8){const yy=y+Math.sin(x/W*5.4)*amp;x===-8?wc.moveTo(x,yy):wc.lineTo(x,yy);}
   wc.lineTo(W+8,y+depth*.25);wc.lineTo(-8,y+depth*.25);wc.closePath();wc.fill();
+  wc.beginPath();for(let x=-8;x<=W+8;x+=8){const yy=y+Math.sin(x/W*5.4)*amp;x===-8?wc.moveTo(x,yy):wc.lineTo(x,yy);}wc.strokeStyle='rgba(218,227,207,.62)';wc.lineWidth=2;wc.stroke();wc.restore();
+ }
+ if(state.weather==='rain'){
+  const quiet=state.breathing?.3:1;
+  for(let i=0;i<38;i++){
+   const age=(time*.7+i*.618)%1,x=((Math.sin(i*73.1)*437.3)%1+1)%1*W,y=data.minY+depth*(.12+(((Math.sin(i*51.7)*713.3)%1+1)%1)*.83);
+   wc.strokeStyle=`rgba(192,214,206,${(1-age)*.35*quiet})`;wc.lineWidth=.7;wc.beginPath();wc.ellipse(x,y,(2+age*19)*(0.3+(y-data.minY)/depth),1+age*4,0,0,Math.PI*2);wc.stroke();
+  }
  }
  wc.globalCompositeOperation='destination-in';wc.drawImage(data.mask,0,0);wc.globalCompositeOperation='source-over';sc.drawImage(water,0,0);
 }
@@ -102,8 +116,16 @@ export function drawLivingWorld(ctx,W,H,time,state){
  W=Math.round(W);H=Math.round(H);const data=prepare(W,H,state);if(!data)return;
  if(stage.width!==W||stage.height!==H)for(const c of [stage,water,leaves]){c.width=W;c.height=H;}
  sc.clearRect(0,0,W,H);sc.drawImage(data.source,0,0);
+ if(state.wind&&state.place!=='city'&&!(state.mode==='welcome'&&!state.portalOpen)){
+  // Bend the existing canopy continuously; replace rows rather than overlaying a copy.
+  const end=H*.40,quiet=state.breathing?.35:1;
+  for(let y=0;y<end;y+=2){const x=Math.sin(time*.55+y/H*2.5)*W*.0028*(1-y/end)**2*(state.motionScale??1)*quiet;
+   sc.drawImage(data.source,0,y,W,2,x,y,W,2);
+  }
+ }
+
  if(state.place!=='city')waterMotion(data,W,H,time,state);
- if(state.place==='city'&&!state.paused){
+ if(state.place==='city'){
   const breath=state.breathAmount||0,light=.012+(Math.sin(time*.22)+1)*.008+breath*.11;
   const wash=sc.createLinearGradient(0,0,W*.25,H*.76);wash.addColorStop(0,`rgba(221,226,204,${light})`);wash.addColorStop(1,'rgba(221,226,204,0)');sc.fillStyle=wash;sc.fillRect(0,0,W,H);
  }

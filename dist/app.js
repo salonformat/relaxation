@@ -1,5 +1,7 @@
+import {breathAt} from './breath-rhythm.js';
 import {copy,makeGuides,applyCopy} from './copy.js';
 import {drawLivingWorld} from './living-world.js';
+import {drawFallingLeaves} from './nature-motion.js';
 import {Soundscape} from './sound.js';
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');
@@ -15,20 +17,46 @@ function drawWeather(){
  if(state.place==='city'){wc.save();wc.beginPath();wc.moveTo(W*.17,0);wc.lineTo(W*.88,0);wc.lineTo(W*.88,H*.83);wc.lineTo(W*.09,H*.88);wc.closePath();wc.clip();}
  if(snow||rain)for(const p of particles){const z=p.size/3,y=((p.y+time*p.speed*(snow?.12:1))%1)*H,x=(p.x*W+(state.wind?Math.sin(time*.3+p.y*15)*(snow?35:4):0)+W)%W;if(snow){wc.fillStyle=`rgba(240,242,234,${.4+z*.45})`;wc.beginPath();wc.arc(x,y,p.size,0,7);wc.fill();}else{wc.strokeStyle=`rgba(205,222,223,${.14+z*.35})`;wc.lineWidth=.5+z*.7;wc.beginPath();wc.moveTo(x,y);wc.lineTo(x-(state.wind?4:1),y+p.len*(.6+z));wc.stroke();}}
  if(state.place==='city')wc.restore();
- if(state.wind&&state.season==='autumn'&&state.place!=='city')for(let i=0;i<7;i++){const age=(time*.027+hash(i+500))%1,x=W*(.65+hash(i+120)*.35-age*.35)+Math.sin(age*8+i)*20,y=H*(.05+age*.95);wc.save();wc.translate(x,y);wc.rotate(age*5+i);wc.fillStyle=i%3===0?'#9a795d':'#ad916a';wc.beginPath();wc.moveTo(-5,0);wc.quadraticCurveTo(0,-3,7,0);wc.quadraticCurveTo(0,4,-5,0);wc.fill();wc.restore();}
+ drawFallingLeaves(wc,W,H,time,state);
 }
 function resize(){W=innerWidth;H=innerHeight;dpr=Math.min(devicePixelRatio||1,2);for(const c of [canvas,weather]){c.width=W*dpr;c.height=H*dpr;}ctx.setTransform(dpr,0,0,dpr,0,0);wc.setTransform(dpr,0,0,dpr,0,0);drawWorld();drawWeather();}
-function setBreathing(value){state.breathing=value;if(value){breathStart=time;$('#breath-word').textContent=t.inhale;lastBreathWord=t.inhale;}$('#breath-guide').hidden=!value;if(!value){$('#breath-guide').style.setProperty('--breath','0');sound.breathe(0,false);}}
-function updateBreath(){const target=state.breathing?(()=>{const phase=(time-breathStart)%10;const inhale=phase<4;const word=inhale?t.inhale:t.exhale;if(word!==lastBreathWord){$('#breath-word').textContent=word;lastBreathWord=word;}return inhale?.5-.5*Math.cos(phase/4*Math.PI):.5+.5*Math.cos((phase-4)/6*Math.PI);})():0;state.breathAmount+=(target-state.breathAmount)*.08;$('#breath-guide').style.setProperty('--breath',state.breathAmount.toFixed(3));if(state.breathing)sound.breathe(state.breathAmount,true);}
-function updateGuidance(dt){if(!state.guide||document.hidden)return;state.guideElapsed+=dt;const g=guides[state.guide];if(state.guideElapsed>=g.end){finishGuide();return;}let index=-1;for(let i=0;i<g.cues.length;i++)if(state.guideElapsed>=g.cues[i].at)index=i;if(index!==cueIndex&&index>=0){cueIndex=index;$('#guide-line').textContent=state.guide==='breath'&&index===2&&state.place==='city'?t.curtain:g.cues[index].text;}const c=g.cues[index];$('#guide-line').classList.toggle('is-quiet',!c||state.guideElapsed>c.at+c.hold);if(state.guide==='breath'&&state.guideElapsed>=g.breathAt&&state.guideElapsed<90&&!state.breathing)setBreathing(true);if(state.guide==='breath'&&state.guideElapsed>=90&&state.breathing)setBreathing(false);}
-function animate(ts){if(!last)last=ts;const dt=Math.min((ts-last)/1000,.1);last=ts;if(!document.hidden){updateGuidance(dt);if(!state.paused){time+=Math.min(dt,.05);state.look.x+=(look.x-state.look.x)*.035;state.look.y+=(look.y-state.look.y)*.035;updateBreath();sound.update(time,state);}if(ts-lastDraw>33&&(!state.paused||state.breathAmount>.001)){drawWorld();drawWeather();lastDraw=ts;}}requestAnimationFrame(animate);}
+function setBreathing(value){state.breathing=value;if(value){breathStart=time;$('#breath-word').textContent=t.inhale;lastBreathWord=t.inhale;$('#breath-duration').textContent=t.inhaleDuration;}$('#breath-guide').hidden=!value;$('#skip-breath').hidden=!value;if(!value){$('#breath-guide').style.setProperty('--breath','0');sound.breathe(0,false);}}
+function updateBreath(){
+ if(state.breathing){
+  // Text and surface share this exact phase. No delayed interpolation at turns.
+  const elapsed=Math.max(0,state.guideElapsed-guides[state.guide].breathAt),{phase,inhale,amount}=breathAt(elapsed);
+  const word=inhale?t.inhale:t.exhale;
+  $('#breath-word').textContent=word;
+  $('#breath-duration').textContent=inhale?t.inhaleDuration:t.exhaleDuration;
+  state.breathPhase=inhale?'in':'out';state.breathSeconds=phase;
+  state.breathAmount=amount;
+ }else state.breathAmount*=.94;
+ $('#breath-guide').style.setProperty('--breath',state.breathAmount.toFixed(4));
+ if(state.breathing)sound.breathe(state.breathAmount,true);
+}
+function cueText(g,index){
+ if(state.place==='city'&&((state.guide==='breath'&&index===1)||(state.guide==='journey'&&index===11)))return t.curtain;
+ if(state.place==='city'&&state.guide==='journey'&&index===10)return ({de:'Jetzt kannst du eine Weile dem Licht folgen.\nAugen wieder auf, wenn du magst.',en:'Now you can follow the light for a while.\nOpen your eyes again, if you like.',fr:'Tu peux maintenant suivre la lumière.\nRouvre les yeux si tu en as envie.'})[language];
+ return g.cues[index].text;
+}
+function updateGuidance(dt){
+ if(!state.guide||document.hidden||state.paused)return;
+ state.guideElapsed+=dt;const g=guides[state.guide];
+ if(state.guideElapsed>=g.end){finishGuide();return;}
+ let index=-1;for(let i=0;i<g.cues.length;i++)if(state.guideElapsed>=g.cues[i].at)index=i;
+ if(index!==cueIndex&&index>=0){cueIndex=index;$('#guide-line').textContent=cueText(g,index);}
+ const c=g.cues[index];$('#guide-line').classList.toggle('is-quiet',!c||state.guideElapsed>c.at+c.hold);
+ const paced=!!g.breathAt&&!state.skipBreath&&state.guideElapsed>=g.breathAt&&state.guideElapsed<g.breathUntil;
+ if(paced!==state.breathing)setBreathing(paced);
+}
+function animate(ts){if(!last)last=ts;const dt=Math.max(0,(ts-last)/1000);last=ts;if(!document.hidden){updateGuidance(dt);if(!state.paused){time+=dt;state.look.x+=(look.x-state.look.x)*.035;state.look.y+=(look.y-state.look.y)*.035;updateBreath();sound.update(time,state);}if(ts-lastDraw>33&&(!state.paused||state.breathAmount>.001)){drawWorld();drawWeather();lastDraw=ts;}}requestAnimationFrame(animate);}
 function announce(text){$('#status').textContent=text;}
 function hideConversations(){for(const id of ['invitation','guide-choice','guidance','closing'])$('#'+id).hidden=true;document.body.classList.remove('talking','guiding');}
 function clearArrival(){clearTimeout(arrivalTimer);arrivalTimer=null;}
 function showInvitation(){if(state.bare||!$('#places').hidden)return;state.mode='invitation';hideConversations();$('#invitation').hidden=false;document.body.classList.add('talking');$('#just-stay').focus({preventScroll:true});}
 function simplyStay(){clearArrival();stopGuide(false);hideConversations();state.mode='stay';$('#companionship').focus({preventScroll:true});}
-function showGuideChoice(){clearArrival();stopGuide(false);hideConversations();state.mode='choice';$('#guide-choice').hidden=false;document.body.classList.add('talking');$('[data-guide=breath]').focus({preventScroll:true});}
-function startGuide(key){clearArrival();clearTimeout(closingTimer);stopGuide(false);hideConversations();state.mode='guide';document.body.classList.add('guiding');state.guide=key;state.guideElapsed=0;cueIndex=-1;lastGuide=key;$('#guidance').hidden=false;$('#technique-toggle').hidden=true;updateGuidance(0);$('#stop-guide').focus({preventScroll:true});}
+function showGuideChoice(){clearArrival();stopGuide(false);hideConversations();state.mode='choice';$('#guide-choice').hidden=false;document.body.classList.add('talking');$('[data-guide=journey]').focus({preventScroll:true});}
+function startGuide(key){clearArrival();clearTimeout(closingTimer);stopGuide(false);hideConversations();state.skipBreath=false;state.mode='guide';document.body.classList.add('guiding');state.guide=key;state.guideElapsed=0;cueIndex=-1;lastGuide=key;$('#guidance').hidden=false;$('#technique-toggle').hidden=true;updateGuidance(0);$('#stop-guide').focus({preventScroll:true});}
 function stopGuide(showEnding=false){document.body.classList.remove('guiding');state.guide=null;state.guideElapsed=0;cueIndex=-1;setBreathing(false);$('#guidance').hidden=true;if(showEnding)finishGuide();}
 function finishGuide(){state.guide=null;setBreathing(false);hideConversations();state.mode='stay';$('#closing').hidden=false;$('#technique-toggle').hidden=!lastGuide;closingTimer=setTimeout(()=>$('#closing').hidden=true,11000);$('#companionship').focus({preventScroll:true});}
 function togglePlaces(force){const open=typeof force==='boolean'?force:$('#places').hidden;$('#places').hidden=!open;$('#place-toggle').setAttribute('aria-expanded',String(open));document.body.classList.toggle('choosing',open);if(open){clearArrival();stopGuide(false);hideConversations();$('#close-places').focus({preventScroll:true});}}
@@ -46,12 +74,13 @@ function setPaused(value){state.paused=value;document.body.classList.toggle('pau
 $('#motion').addEventListener('click',()=>setPaused(!state.paused));reduced.addEventListener('change',e=>{state.motionScale=e.matches?.35:1;drawWorld();});
 function bare(value){state.bare=value;document.body.classList.toggle('bare',value);$('.topbar').inert=value;$('.bottom').inert=value;$('main').inert=value;$('#restore-interface').hidden=!value;if(value){clearArrival();togglePlaces(false);$('#restore-interface').focus({preventScroll:true});}else $('#hide-interface').focus({preventScroll:true});}
 $('#hide-interface').addEventListener('click',()=>bare(true));$('#restore-interface').addEventListener('click',()=>bare(false));
-$('#technique-toggle').addEventListener('click',()=>{if(!lastGuide)return;$('#technique-title').textContent=guides[lastGuide].name;$('#technique-text').textContent=guides[lastGuide].about;$('#technique-source').href=lastGuide==='senses'?'https://www.nhsinform.scot/healthy-living/mental-wellbeing/breathing-and-relaxation-exercises/':'https://www.gesundheit.gv.at/leben/stress/entspannt-bleiben.html';$('#technique-source').textContent=t.source;$('#technique').showModal();});$('#close-technique').addEventListener('click',()=>$('#technique').close());
+$('#technique-toggle').addEventListener('click',()=>{if(!lastGuide)return;$('#technique-title').textContent=guides[lastGuide].name;$('#technique-text').textContent=guides[lastGuide].about;$('#technique-source').href=lastGuide==='journey'?'https://www.nccih.nih.gov/health/relaxation-techniques-what-you-need-to-know':lastGuide==='breath'?'https://pmc.ncbi.nlm.nih.gov/articles/PMC10395759/':lastGuide==='senses'?'https://www.nhsinform.scot/healthy-living/mental-wellbeing/breathing-and-relaxation-exercises/':'https://www.gesundheit.gv.at/leben/stress/entspannt-bleiben.html';$('#technique-source').textContent=t.source;$('#technique').showModal();});$('#close-technique').addEventListener('click',()=>$('#technique').close());
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(state.bare)bare(false);else if(!$('#places').hidden){togglePlaces(false);(state.mode==='welcome'?$('#begin'):$('#place-toggle')).focus();}else if(state.guide){stopGuide(false);state.mode='stay';}else if(['choice','invitation'].includes(state.mode))simplyStay();});
 document.addEventListener('pointerdown',e=>{if(!$('#places').hidden&&!$('#places').contains(e.target)&&!$('#place-toggle').contains(e.target)&&!e.target.closest('.language-switch')){togglePlaces(false);return;}if(['stay','guide','arriving'].includes(state.mode)&&!e.target.closest('button,a,aside,dialog,input'))state.ripple={x:e.clientX/W,y:e.clientY/H,at:time};});window.addEventListener('pointermove',e=>{if(state.mode==='welcome'||!$('#places').hidden)return;look={x:(e.clientX/W-.5)*2,y:(e.clientY/H-.5)*2};},{passive:true});
 document.addEventListener('visibilitychange',()=>{last=0;sound.hide(document.hidden);if(!document.hidden&&state.mode==='arriving'&&!arrivalTimer)showInvitation();});window.addEventListener('resize',resize,{passive:true});window.addEventListener('relaxation-art-ready',()=>{drawWorld();drawWeather();});
 window.relaxation={state,sound,get language(){return language},ready:()=>({audio:sound.context?.state,level:sound.measure()})};changeLanguage(language);resize();requestAnimationFrame(animate);
 
-function changeLanguage(lang){if(!copy[lang])return;language=lang;t=copy[lang];labels=t.places;guides=makeGuides(t);try{localStorage.setItem('relaxation-language',lang);}catch{}applyCopy(lang);lastBreathWord='';setPaused(state.paused);$('#sound span').textContent=state.sound?t.soundOn:t.soundOff;$('#sound').setAttribute('aria-label',state.sound?t.soundOffAria:t.soundOnAria);sync();if(state.guide&&cueIndex>=0)$('#guide-line').textContent=state.guide==='breath'&&cueIndex===2&&state.place==='city'?t.curtain:guides[state.guide].cues[cueIndex].text;if(lastGuide&&!$('#technique').hidden){$('#technique-title').textContent=guides[lastGuide].name;$('#technique-text').textContent=guides[lastGuide].about;$('#technique-source').textContent=t.source;}}
+function changeLanguage(lang){if(!copy[lang])return;language=lang;t=copy[lang];labels=t.places;guides=makeGuides(t);try{localStorage.setItem('relaxation-language',lang);}catch{}applyCopy(lang);lastBreathWord='';setPaused(state.paused);$('#sound span').textContent=state.sound?t.soundOn:t.soundOff;$('#sound').setAttribute('aria-label',state.sound?t.soundOffAria:t.soundOnAria);sync();if(state.guide&&cueIndex>=0)$('#guide-line').textContent=cueText(guides[state.guide],cueIndex);if(lastGuide&&!$('#technique').hidden){$('#technique-title').textContent=guides[lastGuide].name;$('#technique-text').textContent=guides[lastGuide].about;$('#technique-source').textContent=t.source;}}
+$('#skip-breath').addEventListener('click',()=>{state.skipBreath=true;setBreathing(false);state.guideElapsed=guides[state.guide].breathUntil;cueIndex=-1;updateGuidance(0);$('#stop-guide').focus({preventScroll:true});});
 $$('[data-language]').forEach(b=>b.addEventListener('click',()=>changeLanguage(b.dataset.language)));
 $('#intro-rain').addEventListener('click',()=>{state.weather=state.weather==='rain'?'clear':'rain';$('#intro-rain').setAttribute('aria-pressed',String(state.weather==='rain'));sync();if(!state.sound)setSound(true);});

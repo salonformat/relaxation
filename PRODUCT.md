@@ -40,3 +40,8 @@ The user approved the illustrated assets, then requested a coherent arrival → 
 ## Water and sound refinement · 2026-10-27
 The entrance now has one sentence and the entry button. Water uses continuous two-pixel displacement samples from an isolated water texture, keeping land out of the animated layer. Seven expanding swells dissolve in perspective; a separate broad lift of the water surface follows the voluntary four-second in / six-second out rhythm. The original horizon and land remain still. Reduced motion attenuates displacement, and pause freezes the scene.
 The procedural stereo soundscape has separate deep water, surf wash, foam, rain, foliage, wind and irregular drop layers. Slow, unequal currents vary gain and filtering; surf shares a time base with the visible water. These are synthesized sounds, not field recordings. Sound still requires user interaction and fades when the tab is hidden.
+
+
+## Five-minute journey · 2026-10-27
+A prominent “Eine kleine Pause” / “A little break” / “Une petite pause” option now opens a 300-second sequence: arrival, hands and shoulders, 120 seconds of optional 4:6 breathing, and reorientation. A shared elapsed-time phase drives the words, duration label, water crest and daylight. Active breathing has no interpolation lag at the phase boundary. Pause freezes guidance as well as motion. Breathing can be skipped. Technique information states that the authored short programme is not clinically tested.
+Autumn lake leaves are cut from the approved orchard image, fall, turn, settle and drift. The canopy bends gently under the same wind setting. Rain rings are clipped to the water; ambient motion is quieter during breathing.
