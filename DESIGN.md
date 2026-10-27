@@ -174,3 +174,8 @@ The procedural stereo soundscape has separate deep water, surf wash, foam, rain,
 ## Five-minute journey · 2026-10-27
 A prominent “Eine kleine Pause” / “A little break” / “Une petite pause” option now opens a 300-second sequence: arrival, hands and shoulders, 120 seconds of optional 4:6 breathing, and reorientation. A shared elapsed-time phase drives the words, duration label, water crest and daylight. Active breathing has no interpolation lag at the phase boundary. Pause freezes guidance as well as motion. Breathing can be skipped. Technique information states that the authored short programme is not clinically tested.
 Autumn lake leaves are cut from the approved orchard image, fall, turn, settle and drift. The canopy bends gently under the same wind setting. Rain rings are clipped to the water; ambient motion is quieter during breathing.
+
+
+## Scene consistency and quieter detail · 2026-10-27
+Copy is resolved per scene as a complete dictionary: the window choice hint, both breathing cues, journey introduction and exercise explanation refer to changing daylight. Lake and sea retain water cues. Completed-exercise explanations retain their original scene through later place/language changes. Winter precipitation is labelled Schnee / Snow / Neige; clear winter weather has no falling precipitation, while the precipitation option renders snow with no rain rings or rain/drop sound layers.
+The intro carries a small translated Noirmoutier inspiration credit attributed to Isabella Kohout. Fine bright outlines within foliage and rocks are softened towards nearby paint colours at render time; broad composition and source artwork remain.

@@ -12,10 +12,19 @@ function prepare(W,H,state){
  const sx=image.width*tile[0],sy=image.height*tile[1],sw=image.width*tile[2],sh=image.height*tile[3],scale=Math.max(W/sw,H/sh),dw=sw*scale,dh=sh*scale,dx=(W-dw)/2,dy=(H-dh)/2;
  c.drawImage(image,sx,sy,sw,sh,dx,dy,dw,dh);
  const pixels=c.getImageData(0,0,W,H),waterData=c.createImageData(W,H),leafData=c.createImageData(W,H);let minY=H,maxY=0;
+ const originalPixels=new Uint8ClampedArray(pixels.data);
  const leafColors={spring:[146,166,112],summer:[102,130,87],autumn:[173,110,66]};
  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
   const i=(y*W+x)*4,originalY=tile[1]+((y-dy)/dh)*tile[3],originalX=tile[0]+((x-dx)/dw)*tile[2];
   let r=pixels.data[i],g=pixels.data[i+1],b=pixels.data[i+2];
+  if(state.place!=='city'&&(originalY>.73||(originalY<.34&&originalX>.23))&&r>180&&g>165&&b>140&&Math.max(r,g,b)-Math.min(r,g,b)<70){
+   let best=r+g+b,near=null;const radius=Math.max(2,Math.round(W/500));
+   for(const [ox,oy]of [[-radius,0],[radius,0],[0,-radius],[0,radius]]){
+    const xx=Math.max(0,Math.min(W-1,x+ox)),yy=Math.max(0,Math.min(H-1,y+oy)),j=(yy*W+xx)*4,sum=originalPixels[j]+originalPixels[j+1]+originalPixels[j+2];
+    if(sum<best-30){best=sum;near=[originalPixels[j],originalPixels[j+1],originalPixels[j+2]];}
+   }
+   if(near){r=r*.30+near[0]*.70;g=g*.30+near[1]*.70;b=b*.30+near[2]*.70;}
+  }
   const isWater=state.place!=='city'&&originalY>.385&&originalY<.91&&g-r>25&&b-r>35&&b>=g*.98&&r<180;
   if(isWater){waterData.data[i+3]=255;minY=Math.min(minY,y);maxY=Math.max(maxY,y);}
   const green=g-r>3&&g-b>9,ochre=r-g>17&&g-b>18;
@@ -103,7 +112,7 @@ function waterMotion(data,W,H,time,state){
   wc.lineTo(W+8,y+depth*.25);wc.lineTo(-8,y+depth*.25);wc.closePath();wc.fill();
   wc.beginPath();for(let x=-8;x<=W+8;x+=8){const yy=y+Math.sin(x/W*5.4)*amp;x===-8?wc.moveTo(x,yy):wc.lineTo(x,yy);}wc.strokeStyle='rgba(218,227,207,.62)';wc.lineWidth=2;wc.stroke();wc.restore();
  }
- if(state.weather==='rain'){
+ if(state.weather==='rain'&&state.season!=='winter'){
   const quiet=state.breathing?.3:1;
   for(let i=0;i<38;i++){
    const age=(time*.7+i*.618)%1,x=((Math.sin(i*73.1)*437.3)%1+1)%1*W,y=data.minY+depth*(.12+(((Math.sin(i*51.7)*713.3)%1+1)%1)*.83);

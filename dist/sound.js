@@ -31,13 +31,13 @@ export class Soundscape {
  scene(state){this.currentScene={...state};this.lastUpdate=-1;this.update(this.visualTime||0,state);}
  update(time,state=this.currentScene){
   this.visualTime=time;if(!this.context||!this.enabled||Math.abs(time-this.lastUpdate)<.12)return;this.lastUpdate=time;
-  const t=this.context.currentTime,sea=state.place==='sea',lake=state.place==='country',rain=state.weather==='rain',winter=state.season==='winter';
+  const t=this.context.currentTime,sea=state.place==='sea',lake=state.place==='country',winter=state.season==='winter',rain=state.weather==='rain'&&!winter;
   // A long surge shared with the visible swell, varied by two slower currents.
   const surge=(.5+.5*Math.sin(time*.58-1.3))**1.7;
   const drift=.78+.13*Math.sin(time*.137)+.09*Math.sin(time*.233+2);
   const breath=this.breath*.055,level=winter?.76:1;
   const gains={depth:sea?(.21+surge*.10)*level:lake?.075:0,wash:sea?(.18+surge*.34+breath)*drift*level:lake?.055:0,foam:sea?(.018+surge*.075)*drift:lake?.004:0,rain:rain?(state.place==='city'?.19:.14)*(.9+.1*Math.sin(time*.19)):0,leaves:rain?.023*(1+.25*Math.sin(time*.37)):0,drops:rain?(state.place==='city'?.55:.27):0,wind:state.wind?(.045+.035*(.5+.5*Math.sin(time*.21))):.008};
-  for(const [name,value]of Object.entries(gains))this.voices[name].volume.gain.setTargetAtTime(value,t,.6);
+  for(const [name,value]of Object.entries(gains))this.voices[name].volume.gain.setTargetAtTime(value,t,winter&&['rain','drops','leaves'].includes(name)?.25:.6);
   this.voices.wash.filter.frequency.setTargetAtTime(700+surge*1000+this.breath*180,t,.8);
   this.voices.foam.filter.frequency.setTargetAtTime(1300+surge*950,t,.8);
   this.voices.rain.filter.frequency.setTargetAtTime(state.place==='city'?2600:4200,t,1.5);
