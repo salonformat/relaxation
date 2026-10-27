@@ -1,6 +1,7 @@
 // Falling leaves are cut from the existing illustration, preserving its paint and edges.
 const sprites=[];
-const orchard=new Image();orchard.src='assets/orchard.jpg';orchard.onload=()=>{
+let loading=false;
+function loadLeafSprites(){loading=true;const orchard=new Image();orchard.decoding='async';orchard.onload=()=>{
  for(const [x,y,w,h]of [[801,937,118,48],[872,882,73,43],[930,961,84,49]]){
   const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(orchard,x,y,w,h,0,0,w,h);
   const p=ctx.getImageData(0,0,w,h),mask=new Uint8Array(w*h),visited=new Uint8Array(w*h);let largest=[];
@@ -22,10 +23,10 @@ const orchard=new Image();orchard.src='assets/orchard.jpg';orchard.onload=()=>{
 
   ctx.putImageData(p,0,0);sprites.push(c);
  }
-};
+};orchard.src='assets/orchard.jpg';}
 const hash=n=>{const v=Math.sin(n*73.17+19.3)*43758.5453;return v-Math.floor(v);};
 export function drawFallingLeaves(ctx,W,H,time,state){
- if(state.place!=='country'||state.season!=='autumn'||!sprites.length)return;
+ if(state.place!=='country'||state.season!=='autumn')return;if(!loading)loadLeafSprites();if(!sprites.length)return;
  const quiet=state.breathing?.32:1,scale=state.motionScale??1;
  for(let i=0;i<9;i++){
   const cycle=25+hash(i+3)*12,age=(time+i*4.9)%cycle,fall=11+hash(i+5)*5;

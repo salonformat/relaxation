@@ -1,21 +1,27 @@
-import {ambienceFor} from './audio-profile.js?v=mobile-audio-1';
+import {ambienceFor} from './audio-profile.js?v=performance-1';
 // Layered procedural ambience. No microphone, voice or external audio requests.
 export class Soundscape {
- constructor(){this.context=null;this.enabled=false;this.volume=.45;this.voices={};this.level=0;this.breath=0;this.lastUpdate=-1;this.currentScene={place:'sea',weather:'clear',wind:true,season:'summer'};}
+ constructor(){this.playRequest=0;this.context=null;this.enabled=false;this.volume=.45;this.voices={};this.level=0;this.breath=0;this.lastUpdate=-1;this.currentScene={place:'sea',weather:'clear',wind:true,season:'summer'};}
  async start(){
+  const request=++this.playRequest;
   // Treat this as intentional media playback, including on iPhones in silent mode.
   try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch{}
-  let waking;
-  if(!this.context){
-   const AC=window.AudioContext||window.webkitAudioContext;if(!AC)throw Error('Kein Web Audio');this.context=new AC();const a=this.context;waking=a.resume();
+  if(!this.initializing)this.initializing=this.initialize();
+  await this.initializing;
+  await this.context.resume();if(request!==this.playRequest)return false;if(this.context.state!=='running')throw Error('Audio is not running');this.enabled=true;this.lastUpdate=-1;this.master.gain.setTargetAtTime(this.volume,this.context.currentTime,1.2);return true;
+ }
+ async initialize(){
+   const AC=window.AudioContext||window.webkitAudioContext;if(!AC)throw Error('Kein Web Audio');this.context=new AC();const a=this.context;const waking=a.resume();
    this.master=a.createGain();this.master.gain.value=0;
    const limiter=a.createDynamicsCompressor();limiter.threshold.value=-20;limiter.knee.value=24;limiter.ratio.value=3;limiter.attack.value=.08;limiter.release.value=.8;
    this.analyser=a.createAnalyser();this.analyser.fftSize=512;this.master.connect(limiter);limiter.connect(this.analyser);this.analyser.connect(a.destination);
-   const noise=(seconds,brown=false)=>{const buffer=a.createBuffer(2,Math.floor(a.sampleRate*seconds),a.sampleRate);for(let ch=0;ch<2;ch++){const out=buffer.getChannelData(ch);let low=0;for(let i=0;i<out.length;i++){const w=Math.random()*2-1;low=(low+w*.025)/1.025;out[i]=brown?low*5:w;}
+   const noiseRate=Math.min(a.sampleRate,24000);
+   const yieldToUI=()=>new Promise(resolve=>setTimeout(resolve,0));
+   const noise=async(seconds,brown=false)=>{const buffer=a.createBuffer(2,Math.floor(noiseRate*seconds),noiseRate);for(let ch=0;ch<2;ch++){const out=buffer.getChannelData(ch);let low=0;for(let begin=0;begin<out.length;begin+=48000){const end=Math.min(out.length,begin+48000);for(let i=begin;i<end;i++){const w=Math.random()*2-1;low=(low+w*.025)/1.025;out[i]=brown?low*5:w;}await yieldToUI();}
     // A short overlap at the seam avoids a repeating click.
-    const seam=Math.floor(a.sampleRate*.08);for(let i=0;i<seam;i++){const k=i/seam;out[out.length-seam+i]=out[out.length-seam+i]*(1-k)+out[i]*k;}}
+    const seam=Math.floor(noiseRate*.08);for(let i=0;i<seam;i++){const k=i/seam;out[out.length-seam+i]=out[out.length-seam+i]*(1-k)+out[i]*k;}}
     return buffer;};
-   const deep=noise(31,true),air=noise(37),rain=noise(29);
+   const deep=await noise(11,true),air=await noise(13),rain=await noise(9);
    const voice=(name,buffer,type,freq,pan)=>{const source=a.createBufferSource();source.buffer=buffer;source.loop=true;const filter=a.createBiquadFilter();filter.type=type;filter.frequency.value=freq;filter.Q.value=.38;const volume=a.createGain();volume.gain.value=0;const stereo=a.createStereoPanner();stereo.pan.value=pan;source.connect(filter);filter.connect(volume);volume.connect(stereo);stereo.connect(this.master);source.start(0,Math.random()*buffer.duration);this.voices[name]={source,filter,volume};};
    voice('depth',deep,'lowpass',280,0);
    voice('wash',deep,'lowpass',1250,-.32);
@@ -29,9 +35,9 @@ export class Soundscape {
    const drops=a.createBuffer(2,a.sampleRate*23,a.sampleRate);
    for(let ch=0;ch<2;ch++){const out=drops.getChannelData(ch);for(let at=.2;at<22.7;at+=.08+Math.random()*.65){const start=Math.floor(at*a.sampleRate),length=Math.floor(a.sampleRate*(.018+Math.random()*.05)),pitch=650+Math.random()*1500,amp=.05+Math.random()*.12;for(let j=0;j<length&&start+j<out.length;j++){const env=Math.sin(Math.PI*j/length)*Math.exp(-j/length*5);out[start+j]+=((Math.random()*2-1)*.7+Math.sin(j/a.sampleRate*pitch*6.283)*.3)*env*amp;}}}
    voice('drops',drops,'lowpass',2900,0);
-  }
-  await (waking||this.context.resume());if(this.context.state!=='running')throw Error('Audio is not running');this.enabled=true;this.lastUpdate=-1;this.master.gain.setTargetAtTime(this.volume,this.context.currentTime,1.2);
+  await waking;
  }
+
  async prepare(){if(!this.context){await this.start();this.stop();}else if(this.context.state!=='running')await this.context.resume();}
  chime(){
   if(!this.context||this.context.state!=='running')return false;
@@ -43,7 +49,7 @@ export class Soundscape {
   }
   this.lastChime=t;return true;
  }
- stop(){this.enabled=false;if(this.context)this.master.gain.setTargetAtTime(0,this.context.currentTime,.5);}
+ stop(){this.playRequest++;this.enabled=false;if(this.context)this.master.gain.setTargetAtTime(0,this.context.currentTime,.5);}
  setVolume(value){this.volume=value;if(this.context&&this.enabled)this.master.gain.setTargetAtTime(value,this.context.currentTime,.3);}
  scene(state){this.currentScene={...state};this.lastUpdate=-1;this.update(this.visualTime||0,state);}
  update(time,state=this.currentScene){

@@ -57,3 +57,8 @@ Lokal und für das private GitHub-Repository vorgesehen; keine öffentliche Bere
 https://salonformat.github.io/relaxation/
 
 GitHub Pages publishes `dist/` using `.github/workflows/pages.yml` after script checks and behaviour tests pass. Audio auditions and local export materials are not part of the deployed site.
+
+### Rendering and loading
+The entrance prioritizes the coast image; other scenes and winter artwork load on demand. Scene masks and audio noise buffers are prepared in small tasks so input and rendering can continue. Canvas rendering targets 60 fps, uses one backing pixel per CSS pixel, and caps the landscape work surface at 1440 × 1080. Steam uses a cached brush instead of per-frame blur; paused scenes stop drawing.
+
+In a local headless Chromium check, the window renderer dropped from approximately 29 ms to 2.6 ms per frame. Desktop and mobile viewport checks reached approximately 60 fps. These are controlled browser measurements, not guarantees for every phone.

@@ -1,10 +1,10 @@
-import {practiceCopy} from './practice-options.js?v=mobile-audio-1';
-import {copyForScene} from './scene-copy.js?v=mobile-audio-1';
-import {breathAt} from './breath-rhythm.js?v=mobile-audio-1';
-import {copy,makeGuides,applyCopy} from './copy.js?v=mobile-audio-1';
-import {drawLivingWorld,sceneProjection} from './living-world.js?v=mobile-audio-1';
-import {drawFallingLeaves} from './nature-motion.js?v=mobile-audio-1';
-import {Soundscape} from './sound.js?v=mobile-audio-1';
+import {practiceCopy} from './practice-options.js?v=performance-1';
+import {copyForScene} from './scene-copy.js?v=performance-1';
+import {breathAt} from './breath-rhythm.js?v=performance-1';
+import {copy,makeGuides,applyCopy} from './copy.js?v=performance-1';
+import {drawLivingWorld,sceneProjection} from './living-world.js?v=performance-1';
+import {drawFallingLeaves} from './nature-motion.js?v=performance-1';
+import {Soundscape} from './sound.js?v=performance-1';
 let navigationReady=false,restoringNavigation=false;
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');
@@ -20,10 +20,10 @@ try{
 function sceneText(lang,place,season,duration=state.journeyDuration,pattern=state.breathPattern){return practiceCopy(copyForScene(lang,place,season),lang,place,duration,pattern);}
 function savePractice(){try{localStorage.setItem('relaxation-practice',JSON.stringify({duration:state.journeyDuration,pattern:state.breathPattern,endSound:state.endSound}));}catch{}}
 let language='de';try{language=localStorage.getItem('relaxation-language')||'de';}catch{}language=new URLSearchParams(location.search).get('lang')||language;if(!copy[language])language='de';let t=sceneText(language,state.place,state.season),labels=t.places,guides=makeGuides(t,state.journeyDuration);
-let W=innerWidth,H=innerHeight,dpr=Math.min(devicePixelRatio||1,2),time=0,last=0,lastDraw=0,closingTimer=null,cueIndex=-1,breathStart=0,lastBreathWord='',pickSound=true,look={x:0,y:0},lastGuide=null,lastGuidePlace=null,lastGuidePattern='4-6',lastGuideDuration=60;
+let W=innerWidth,H=innerHeight,dpr=1,time=0,last=0,lastDraw=0,closingTimer=null,cueIndex=-1,breathStart=0,lastBreathWord='',pickSound=true,look={x:0,y:0},lastGuide=null,lastGuidePlace=null,lastGuidePattern='4-6',lastGuideDuration=60;
 const hash=n=>{const v=Math.sin(n*127.1+311.7)*43758.5453;return v-Math.floor(v);};
 const particles=Array.from({length:150},(_,i)=>({x:hash(i+1),y:hash(i+1000),speed:.04+hash(i+90)*.085,size:.7+hash(i+40)*2.1,len:10+hash(i+20)*16}));
-function drawWorld(){drawLivingWorld(ctx,W,H,time,state);}
+function drawWorld(){const scale=Math.min(1,1440/W,1080/H);ctx.save();ctx.scale(1/scale,1/scale);drawLivingWorld(ctx,Math.round(W*scale),Math.round(H*scale),time,state);ctx.restore();}
 function drawWeather(){
  wc.clearRect(0,0,W,H);const snow=state.season==='winter'&&state.weather==='rain',rain=state.weather==='rain'&&!snow;
  if(state.place==='city'){
@@ -38,7 +38,7 @@ function drawWeather(){
  if(state.place==='city')wc.restore();
  drawFallingLeaves(wc,W,H,time,state);
 }
-function resize(){W=innerWidth;H=innerHeight;dpr=Math.min(devicePixelRatio||1,2);for(const c of [canvas,weather]){c.width=W*dpr;c.height=H*dpr;}ctx.setTransform(dpr,0,0,dpr,0,0);wc.setTransform(dpr,0,0,dpr,0,0);drawWorld();drawWeather();}
+function resize(){W=innerWidth;H=innerHeight;dpr=1;for(const c of [canvas,weather]){c.width=W*dpr;c.height=H*dpr;}ctx.setTransform(dpr,0,0,dpr,0,0);wc.setTransform(dpr,0,0,dpr,0,0);drawWorld();drawWeather();}
 function setBreathing(value){state.breathing=value;if(value){breathStart=time;$('#breath-word').textContent=t.inhale;lastBreathWord=t.inhale;$('#breath-duration').textContent=t.inhaleDuration;}$('#breath-guide').hidden=!value;$('#skip-breath').hidden=!value;if(!value){$('#breath-guide').style.setProperty('--breath','0');sound.breathe(0,false);}}
 function updateBreath(){
  if(state.breathing){
@@ -65,7 +65,7 @@ function updateGuidance(dt){
  const paced=!!g.breathAt&&!state.skipBreath&&state.guideElapsed>=g.breathAt&&state.guideElapsed<g.breathUntil;
  if(paced!==state.breathing)setBreathing(paced);
 }
-function animate(ts){if(!last)last=ts;const dt=Math.max(0,(ts-last)/1000);last=ts;if(!document.hidden){updateGuidance(dt);if(!state.paused){time+=dt;state.look.x+=(look.x-state.look.x)*.035;state.look.y+=(look.y-state.look.y)*.035;updateBreath();sound.update(time,state);}if(ts-lastDraw>33&&(!state.paused||state.breathAmount>.001)){drawWorld();drawWeather();lastDraw=ts;}}requestAnimationFrame(animate);}
+function animate(ts){if(!last)last=ts;const dt=Math.max(0,(ts-last)/1000);last=ts;if(!document.hidden){updateGuidance(dt);if(!state.paused){time+=dt;state.look.x+=(look.x-state.look.x)*.035;state.look.y+=(look.y-state.look.y)*.035;updateBreath();sound.update(time,state);}if(ts-lastDraw>=14&&!state.paused){drawWorld();drawWeather();lastDraw=ts;}}requestAnimationFrame(animate);}
 function announce(text){$('#status').textContent=text;}
 function hideConversations(){for(const id of ['arrival-choice','guide-choice','guidance','closing'])$('#'+id).hidden=true;document.body.classList.remove('talking','guiding');}
 function simplyStay(){stopGuide(false);hideConversations();state.mode='stay';$('#companionship').focus({preventScroll:true});}
@@ -76,7 +76,7 @@ function finishGuide(){if(state.endSound&&!document.hidden)sound.chime();state.g
 function togglePlaces(force){const open=typeof force==='boolean'?force:$('#places').hidden;$('#places').hidden=!open;$('#place-toggle').setAttribute('aria-expanded',String(open));document.body.classList.toggle('choosing',open);if(open){stopGuide(false);hideConversations();$('#close-places').focus({preventScroll:true});}}
 function transitionScene(){const c=$('#transition-world');c.getAnimations().forEach(a=>a.cancel());c.getContext('2d').clearRect(0,0,c.width,c.height);c.style.opacity='0';}
 function sync(){$('#restart').hidden=!state.portalOpen&&state.mode==='welcome';t=sceneText(language,state.place,state.season);labels=t.places;guides=makeGuides(t,state.journeyDuration);applyCopy(language,t);$('#breath-pattern').value=state.breathPattern;$('#end-sound').checked=state.endSound;$$('[data-journey-duration]').forEach(el=>el.setAttribute('aria-pressed',String(Number(el.dataset.journeyDuration)===state.journeyDuration)));$('#return-place').hidden=!favorite;if(favorite)$('#return-place').textContent=t.returnPlaces[favorite.place];for(const el of $$('[data-guide-duration]'))el.textContent=clockText(guides[el.dataset.guideDuration].end);updateGuideTimer();document.body.dataset.scene=state.place;document.body.dataset.season=state.season;$('#place-name').textContent=labels[state.place];for(const key of ['place','season','weather'])$$(`button[data-${key}]`).forEach(b=>b.setAttribute('aria-pressed',String(b.dataset[key]===state[key])));$('#choose-wind').setAttribute('aria-pressed',String(state.wind));drawWorld();drawWeather();sound.scene(state);}
-async function setSound(value){try{if(value){await sound.start();sound.scene(state);}else sound.stop();state.sound=value;$('#mobile-sound-start').hidden=value;$('#sound').setAttribute('aria-pressed',String(value));$('#sound').setAttribute('aria-label',value?t.soundOffAria:t.soundOnAria);$('#sound span').textContent=value?t.soundOn:t.soundOff;}catch{state.sound=false;$('#mobile-sound-start').hidden=false;announce(t.soundError);$('#sound span').textContent=t.soundRetry;}}
+async function setSound(value){try{if(value){if(await sound.start()===false)return;sound.scene(state);}else sound.stop();state.sound=value;$('#mobile-sound-start').hidden=value;$('#sound').setAttribute('aria-pressed',String(value));$('#sound').setAttribute('aria-label',value?t.soundOffAria:t.soundOnAria);$('#sound span').textContent=value?t.soundOn:t.soundOff;}catch{state.sound=false;$('#mobile-sound-start').hidden=false;announce(t.soundError);$('#sound span').textContent=t.soundRetry;}}
 $('#begin').addEventListener('click',()=>{transitionScene();document.body.classList.add('portal-open');state.portalOpen=true;setSound(pickSound);togglePlaces(true);sync();});$('#place-toggle').addEventListener('click',()=>togglePlaces());$('#close-places').addEventListener('click',()=>{togglePlaces(false);(state.mode==='welcome'?$('#begin'):$('#place-toggle')).focus();});
 $$('button[data-place]').forEach(b=>b.addEventListener('click',()=>{transitionScene();state.place=b.dataset.place;state.season=state.place==='country'?'autumn':'summer';state.weather=state.place==='city'?'rain':'clear';sync();}));
 $$('button[data-season]').forEach(b=>b.addEventListener('click',()=>{transitionScene();state.season=b.dataset.season;sync();}));$$('button[data-weather]').forEach(b=>b.addEventListener('click',()=>{state.weather=b.dataset.weather;sync();}));

@@ -2,19 +2,32 @@
 const definitions={sea:{base:'assets/coast.jpg',winter:'assets/coast-winter.jpg'},country:{base:'assets/orchard.jpg',winter:'assets/orchard-winter.jpg'},city:{base:'assets/window.jpg',winter:'assets/window-winter.jpg'}};
 const images={};const cache=new Map();
 const create=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c;};
-for(const [place,urls]of Object.entries(definitions)){images[place]={};for(const [season,url]of Object.entries(urls)){const image=new Image();image.onload=()=>{images[place][season]=image;cache.clear();window.dispatchEvent(new Event('relaxation-art-ready'));};image.src=url;}}
-const stage=create(1,1),water=create(1,1),leaves=create(1,1);const sc=stage.getContext('2d'),wc=water.getContext('2d'),lc=leaves.getContext('2d');
+const pending=new Set();
+function loadImage(place,season){
+ images[place]??={};const key=place+season;if(images[place][season]||pending.has(key))return;
+ pending.add(key);const image=new Image();image.decoding='async';if(place==='sea'&&season==='base')image.fetchPriority='high';
+ image.onload=()=>{images[place][season]=image;pending.delete(key);window.dispatchEvent(new Event('relaxation-art-ready'));};image.onerror=()=>pending.delete(key);image.src=definitions[place][season];
+}
+loadImage('sea','base');
+
+const stage=create(1,1),water=create(1,1);const sc=stage.getContext('2d'),wc=water.getContext('2d');
 function prepare(W,H,state){
  const intro=state.mode==='welcome'&&!state.portalOpen;
  const key=[state.place,state.season,intro,W,H].join(':');if(cache.has(key))return cache.get(key);
- const image=state.season==='winter'?images[state.place].winter:images[state.place].base;if(!image)return null;
+ const variant=state.season==='winter'?'winter':'base';loadImage(state.place,variant);const image=images[state.place]?.[variant];if(!image)return null;
  const source=create(W,H),c=source.getContext('2d',{willReadFrequently:true});const tile=intro?[.02,.27,.68,.40]:[0,0,1,1];
  const sx=image.width*tile[0],sy=image.height*tile[1],sw=image.width*tile[2],sh=image.height*tile[3],scale=Math.max(W/sw,H/sh),dw=sw*scale,dh=sh*scale,dx=(W-dw)*(state.place==='city'?.88:.5),dy=(H-dh)/2;
  c.drawImage(image,sx,sy,sw,sh,dx,dy,dw,dh);
- const pixels=c.getImageData(0,0,W,H),waterData=c.createImageData(W,H),leafData=c.createImageData(W,H);let minY=H,maxY=0;
+ const preview=create(W,H),pc=preview.getContext('2d');pc.filter='saturate(.74) brightness(.83)';pc.drawImage(source,0,0);pc.filter='none';pc.fillStyle='#1f30360b';pc.fillRect(0,0,W,H);
+ const initial={source:preview,loading:true,projection:{dx,dy,dw,dh}};
+ if(cache.size>=2)cache.delete(cache.keys().next().value);cache.set(key,initial);
+ const yieldToUI=()=>new Promise(resolve=>setTimeout(resolve,0));
+ state={...state};
+ const build=async()=>{
+ const pixels=c.getImageData(0,0,W,H),waterData=c.createImageData(W,H);let minY=H,maxY=0;
  const originalPixels=new Uint8ClampedArray(pixels.data);
  const leafColors={spring:[146,166,112],summer:[102,130,87],autumn:[173,110,66]};
- for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+ for(let y=0;y<H;y++){if(y%32===0)await yieldToUI();for(let x=0;x<W;x++){
   const i=(y*W+x)*4,originalY=tile[1]+((y-dy)/dh)*tile[3],originalX=tile[0]+((x-dx)/dw)*tile[2];
   let r=pixels.data[i],g=pixels.data[i+1],b=pixels.data[i+2];
   // Remove the pale illustration seam at the lake horizon by extending the
@@ -36,8 +49,6 @@ function prepare(W,H,state){
   if(isWater){waterData.data[i+3]=255;minY=Math.min(minY,y);maxY=Math.max(maxY,y);}
   const green=g-r>3&&g-b>9,ochre=r-g>17&&g-b>18;
   const isLeaf=state.place!=='city'&&originalY<.49&&(green||ochre);
-  const isCurtain=state.place==='city'&&originalX<.20&&r>180&&g>160;
-  if(isLeaf||isCurtain)leafData.data[i+3]=255;
   if(isLeaf&&state.season!=='winter'){
    let target=leafColors[state.season];if(state.place==='sea'&&state.season==='autumn')target=[94,115,87];
    if(target){const amount=.65;r=r*(1-amount)+target[0]*amount;g=g*(1-amount)+target[1]*amount;b=b*(1-amount)+target[2]*amount;}
@@ -47,17 +58,24 @@ function prepare(W,H,state){
   pixels.data[i+1]=(luminance*.26+g*.74)*.83*.955+48*.045;
   pixels.data[i+2]=(luminance*.26+b*.74)*.83*.955+54*.045;
  }
+ }
+ if(state.place==='city'){
+  c.putImageData(pixels,0,0);
+  const result={source,minY,maxY,cup:{x:dx+dw*.785,y:dy+dh*.782,size:dw*.094},curtainReach:Math.max(0,dx+dw*.27),projection:{dx,dy,dw,dh}};
+  if(cache.size>=2)cache.delete(cache.keys().next().value);cache.set(key,result);return result;
+ }
  // Feather the water boundary inward so moving paint never drags a shore edge.
  const distance=new Float32Array(W*H);
- for(let y=0;y<H;y++)for(let x=0;x<W;x++){const k=y*W+x;distance[k]=waterData.data[k*4+3]?Math.min(x?distance[k-1]+1:0,y?distance[k-W]+1:0,100):0;}
- for(let y=H-1;y>=0;y--)for(let x=W-1;x>=0;x--){const k=y*W+x;distance[k]=Math.min(distance[k],x<W-1?distance[k+1]+1:0,y<H-1?distance[k+W]+1:0);}
+ for(let y=0;y<H;y++){if(y%64===0)await yieldToUI();for(let x=0;x<W;x++){const k=y*W+x;distance[k]=waterData.data[k*4+3]?Math.min(x?distance[k-1]+1:0,y?distance[k-W]+1:0,100):0;}}
+ for(let y=H-1;y>=0;y--){if(y%64===0)await yieldToUI();for(let x=W-1;x>=0;x--){const k=y*W+x;distance[k]=Math.min(distance[k],x<W-1?distance[k+1]+1:0,y<H-1?distance[k+W]+1:0);}}
  const edgeData=c.createImageData(W,H);for(let k=0;k<distance.length;k++)edgeData.data[k*4+3]=Math.max(0,Math.min(1,(distance[k]-10)/18))*255;
- c.putImageData(pixels,0,0);const mask=create(W,H),leafMask=create(W,H);mask.getContext('2d').putImageData(edgeData,0,0);leafMask.getContext('2d').putImageData(leafData,0,0);
+ c.putImageData(pixels,0,0);const mask=create(W,H);mask.getContext('2d').putImageData(edgeData,0,0);
  // Extend water paint beneath the shoreline before displacement. Transparent
  // cut-outs would otherwise carry silhouettes of furniture or rocks into the sea.
  const texture=create(W,H),tc=texture.getContext('2d'),paint=new ImageData(new Uint8ClampedArray(pixels.data),W,H);
  let previous=[48,87,105];
  for(let y=0;y<H;y++){
+  if(y%32===0)await yieldToUI();
   const nearest=new Int32Array(W);let left=-W*2;
   for(let x=0;x<W;x++){if(waterData.data[(y*W+x)*4+3])left=x;nearest[x]=left;}
   let right=W*3;
@@ -67,8 +85,12 @@ function prepare(W,H,state){
   }
  }
  tc.putImageData(paint,0,0);
- const result={source,texture,mask,leafMask,minY,maxY,cup:{x:dx+dw*.785,y:dy+dh*.782,size:dw*.094},curtainReach:Math.max(0,dx+dw*.27),projection:{dx,dy,dw,dh}};if(cache.size>=2)cache.delete(cache.keys().next().value);cache.set(key,result);return result;
+ const result={source,texture,mask,minY,maxY,cup:{x:dx+dw*.785,y:dy+dh*.782,size:dw*.094},curtainReach:Math.max(0,dx+dw*.27),projection:{dx,dy,dw,dh}};if(cache.size>=2)cache.delete(cache.keys().next().value);cache.set(key,result);return result;
+ };
+ build().then(()=>window.dispatchEvent(new Event('relaxation-art-ready'))).catch(error=>{cache.delete(key);console.error('Landscape preparation failed',error);});
+ return initial;
 }
+
 function waterMotion(data,W,H,time,state){
  wc.clearRect(0,0,W,H);
  const strength=state.motionScale??1,depth=Math.max(1,data.maxY-data.minY);
@@ -76,15 +98,15 @@ function waterMotion(data,W,H,time,state){
  // Continuous displacement: tiny adjacent samples keep the painted contours intact.
  // Movement increases towards the viewer, leaving the distant horizon still.
  const lift=breath*depth*.15;
- for(let y=Math.max(0,data.minY);y<=data.maxY;y+=2){
+ for(let y=Math.max(0,data.minY);y<=data.maxY;y+=4){
   const z=Math.max(0,(y-data.minY)/depth),perspective=z*z;
   const surge=Math.sin(time*.58-z*7)*depth*.014+Math.sin(time*.31-z*4)*depth*.008;
   const offset=surge*strength*(state.breathing?.10:.25)*Math.min(1,z*5);
   const x=(Math.sin(time*.27-z*5)*W*.009+Math.sin(time*.43-z*11)*W*.003)*perspective*strength;
-  const yy=Math.max(0,Math.min(data.maxY-2,Math.max(data.minY+1,y-offset)));
-  wc.drawImage(data.texture,0,yy,W,2,x,y,W,2);
-  if(x>0)wc.drawImage(data.texture,0,yy,Math.ceil(x)+1,2,0,y,Math.ceil(x)+1,2);
-  else if(x<0)wc.drawImage(data.texture,W+Math.floor(x)-1,yy,-Math.floor(x)+1,2,W+Math.floor(x)-1,y,-Math.floor(x)+1,2);
+  const yy=Math.max(0,Math.min(data.maxY-4,Math.max(data.minY+1,y-offset)));
+  wc.drawImage(data.texture,0,yy,W,4,x,y,W,4);
+  if(x>0)wc.drawImage(data.texture,0,yy,Math.ceil(x)+1,4,0,y,Math.ceil(x)+1,4);
+  else if(x<0)wc.drawImage(data.texture,W+Math.floor(x)-1,yy,-Math.floor(x)+1,4,W+Math.floor(x)-1,y,-Math.floor(x)+1,4);
  }
  // Swells expand in perspective. Each crest grows, folds softly, then dissolves.
  for(let n=0;n<7;n++){
@@ -128,27 +150,29 @@ function waterMotion(data,W,H,time,state){
  }
  wc.globalCompositeOperation='destination-in';wc.drawImage(data.mask,0,0);wc.globalCompositeOperation='source-over';sc.drawImage(water,0,0);
 }
+let steamSprite;
 function drawCupSteam(c,anchor,time,motionScale){
+ if(!steamSprite){steamSprite=create(128,128);const brush=steamSprite.getContext('2d');brush.filter='blur(5px)';brush.fillStyle='#e2e5d6';brush.beginPath();brush.ellipse(64,64,30,48,0,0,Math.PI*2);brush.fill();}
  const size=anchor.size,driftTime=time*(.55+.45*motionScale);
- c.save();c.filter=`blur(${Math.max(1.3,size*.025)}px)`;
+ c.save();
  // Overlapping translucent wisps rise from inside the rim and disperse.
  for(let i=0;i<15;i++){
   const age=(driftTime*.105+i/15)%1,rise=size*(.08+age*1.25)*(0.65+.35*motionScale);
   const spread=size*(.025+age*.095),x=anchor.x+Math.sin(age*5.2+i*2.1+driftTime*.12)*spread;
   const y=anchor.y-rise,opacity=Math.sin(Math.PI*age)*.20;
-  c.fillStyle=`rgba(226,229,214,${opacity})`;c.beginPath();c.ellipse(x,y,size*(.025+age*.065),size*(.045+age*.11),Math.sin(age*4+i)*.35,0,Math.PI*2);c.fill();
+  const rx=size*(.025+age*.065),ry=size*(.045+age*.11);c.save();c.globalAlpha=opacity;c.translate(x,y);c.rotate(Math.sin(age*4+i)*.35);c.drawImage(steamSprite,-rx*128/60,-ry*128/96,rx*256/60,ry*256/96);c.restore();
  }
  c.restore();
 }
 export function drawLivingWorld(ctx,W,H,time,state){
- W=Math.round(W);H=Math.round(H);const data=prepare(W,H,state);if(!data)return;
- if(stage.width!==W||stage.height!==H)for(const c of [stage,water,leaves]){c.width=W;c.height=H;}
+ W=Math.round(W);H=Math.round(H);const data=prepare(W,H,state);if(!data)return;if(data.loading){ctx.drawImage(data.source,0,0,W,H);return;}
+ if(stage.width!==W||stage.height!==H)for(const c of [stage,water]){c.width=W;c.height=H;}
  sc.clearRect(0,0,W,H);sc.drawImage(data.source,0,0);
  if(state.wind&&state.place!=='city'&&!(state.mode==='welcome'&&!state.portalOpen)){
   // Bend the existing canopy continuously; replace rows rather than overlaying a copy.
   const end=H*.40,quiet=state.breathing?.35:1;
-  for(let y=0;y<end;y+=2){const x=Math.sin(time*.55+y/H*2.5)*W*.0028*(1-y/end)**2*(state.motionScale??1)*quiet;
-   sc.drawImage(data.source,0,y,W,2,x,y,W,2);
+  for(let y=0;y<end;y+=4){const x=Math.sin(time*.55+y/H*2.5)*W*.0028*(1-y/end)**2*(state.motionScale??1)*quiet;
+   sc.drawImage(data.source,0,y,W,4,x,y,W,4);
   }
  }
 
@@ -158,7 +182,7 @@ export function drawLivingWorld(ctx,W,H,time,state){
    const reach=Math.min(W,data.curtainReach),strength=(state.motionScale??1)*(state.breathing?.55:1);
    // An opaque continuous mesh bends the existing curtain: no translucent duplicate.
    const bend=(x,y)=>Math.sin(x/reach*Math.PI)*(Math.sin(time*.43+y/H*.8)*4+Math.sin(time*.19)*1.5)*(y/H)**1.3*strength;
-   for(let y=0;y<H;y+=8)for(let x=0;x<reach;x+=16){const right=Math.min(reach,x+16),leftTo=x+bend(x,y),rightTo=right+bend(right,y);sc.drawImage(data.source,x,y,right-x,Math.min(8,H-y),leftTo,y,rightTo-leftTo,Math.min(8,H-y));}
+   for(let y=0;y<H;y+=16)for(let x=0;x<reach;x+=32){const right=Math.min(reach,x+32),leftTo=x+bend(x,y),rightTo=right+bend(right,y);sc.drawImage(data.source,x,y,right-x,Math.min(16,H-y),leftTo,y,rightTo-leftTo,Math.min(16,H-y));}
   }
   const breath=state.breathAmount||0,light=.012+(Math.sin(time*.22)+1)*.008+breath*.11;
   const wash=sc.createLinearGradient(0,0,W*.25,H*.76);wash.addColorStop(0,`rgba(221,226,204,${light})`);wash.addColorStop(1,'rgba(221,226,204,0)');sc.fillStyle=wash;sc.fillRect(0,0,W,H);
@@ -170,4 +194,8 @@ export function worldIsReady(place){return !!images[place]?.winter;}
 
 export function cupPosition(W,H,state){return prepare(W,H,state)?.cup||null;}
 
-export function sceneProjection(W,H,state){return prepare(W,H,state)?.projection||null;}
+export function sceneProjection(W,H,state){
+ const image=images[state.place]?.[state.season==='winter'?'winter':'base'];if(!image)return null;
+ const scale=Math.max(W/image.width,H/image.height),dw=image.width*scale,dh=image.height*scale;
+ return {dx:(W-dw)*(state.place==='city'?.88:.5),dy:(H-dh)/2,dw,dh};
+}
