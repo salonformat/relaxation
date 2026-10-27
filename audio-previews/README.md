@@ -20,3 +20,9 @@ These replace the male sample for listening review. They are three different pre
 - `relaxation-frau-fr.wav`: fr_FR-siwis-medium; SIWIS French Speech Synthesis Database, University of Edinburgh / SIWIS contributors, CC BY 4.0. Source and attribution: https://datashare.is.ed.ac.uk/handle/10283/2353 . Licence: https://creativecommons.org/licenses/by/4.0/ . Model card: https://huggingface.co/rhasspy/piper-voices/blob/main/fr/fr_FR/siwis/medium/MODEL_CARD
 
 All generated locally with Piper 1.8.0. Length scale 1.30, volume 0.58, 1.8-second pauses between separately generated sentences, 0.5-second leading silence and 0.8-second trailing silence. Script and exact text: `scripts/generate-female-previews.py`. No voice models or generation engine are redistributed. Technical WAV checks confirm format, duration and no clipping; perceived pleasantness remains a listening judgement.
+
+## Connected-phrase auditions, revision 2
+
+Files `relaxation-frau-de-v2.wav`, `relaxation-frau-en-v2.wav`, and `relaxation-frau-fr-v2.wav` use two connected phrases instead of a fixed long pause after every sentence. Length scale is 1.14; a two-second pause separates the two phrases. This reduces artificial stretching while retaining space between instructions.
+
+The German revision uses the requested English Cori voice with the German phonemizer. Cori is trained for English: German pronunciation/prosody is experimental, and this does not turn the model into a trained multilingual voice. No claim of native or natural German delivery is made. English uses Cori; French retains SIWIS. All are synthetic, separate auditions and not enabled in the experience. Sources and attribution above apply. Exact text and settings: `scripts/generate-natural-previews.py`.
